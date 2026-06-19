@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { charactersApi } from '@/lib/api/characters';
-import { Plus, Pencil, Trash2, User } from 'lucide-react';
+import { generateApi } from '@/lib/api/generate';
+import { Plus, Pencil, Trash2, User, Sparkles } from 'lucide-react';
 import type { Character } from '@/types';
 
 const defaultForm = {
@@ -27,6 +28,7 @@ export default function CharactersPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Character | null>(null);
+  const [genLoading, setGenLoading] = useState(false);
   const [form, setForm] = useState(defaultForm);
 
   const fetchData = async () => {
@@ -35,6 +37,23 @@ export default function CharactersPage() {
     setLoading(false);
   };
   useEffect(() => { fetchData(); }, [id]);
+
+  const handleGenerateCharacters = async () => {
+    setGenLoading(true);
+    try {
+      const res = await generateApi.characters(id);
+      if (res.success && res.data?.characters) {
+        for (const ch of res.data.characters as Array<Record<string, unknown>>) {
+          await charactersApi.create(id, { name: (ch.name as string) || '未命名', ...ch } as Parameters<typeof charactersApi.create>[1]);
+        }
+        showToast('success', `AI 生成了 ${res.data.characters.length} 个角色`);
+        fetchData();
+      }
+    } catch (err: unknown) {
+      showToast('error', err instanceof Error ? err.message : '生成失败');
+    }
+    setGenLoading(false);
+  };
 
   const handleSubmit = async () => {
     if (!form.name.trim()) return;
@@ -70,9 +89,14 @@ export default function CharactersPage() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">角色管理</h1>
-          <Button onClick={() => { setEditing(null); setForm(defaultForm); setShowModal(true); }}>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleGenerateCharacters} loading={genLoading}>
+              <Sparkles size={16} /> AI 生成角色
+            </Button>
+            <Button onClick={() => { setEditing(null); setForm(defaultForm); setShowModal(true); }}>
             <Plus size={18} /> 添加角色
           </Button>
+          </div>
         </div>
 
         <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? '编辑角色' : '添加角色'} className="max-w-2xl">

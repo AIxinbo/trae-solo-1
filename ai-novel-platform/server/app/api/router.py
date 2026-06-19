@@ -10,6 +10,7 @@ from app.api.analysis import router as analysis_router
 from app.api.timeline import router as timeline_router
 from app.api.model_config import router as model_config_router
 from app.api.writing_logs import router as writing_logs_router
+from app.api.generate import router as generate_router
 
 api_router = APIRouter()
 
@@ -45,3 +46,6 @@ api_router.include_router(model_config_router, prefix="/user", tags=["模型配�
 
 # 写作日志
 api_router.include_router(writing_logs_router, prefix="/books", tags=["写作日志"])
+
+# AI 生成
+api_router.include_router(generate_router, prefix="/books", tags=["AI生成"])

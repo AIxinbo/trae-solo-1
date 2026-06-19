@@ -11,7 +11,8 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { useOutlineStore } from '@/lib/stores/outline-store';
 import { useToast } from '@/components/ui/Toast';
-import { Plus, ChevronRight, ChevronDown, GripVertical, Trash2, Pencil } from 'lucide-react';
+import { generateApi } from '@/lib/api/generate';
+import { Plus, ChevronRight, ChevronDown, GripVertical, Trash2, Pencil, Sparkles } from 'lucide-react';
 import type { OutlineNode } from '@/types';
 
 function OutlineTree({ nodes, level = 0, onEdit, onDelete }: {
@@ -63,9 +64,36 @@ export default function OutlinesPage() {
   const { outlines, fetchOutlines, createOutline, updateOutline, deleteOutline } = useOutlineStore();
   const [showModal, setShowModal] = useState(false);
   const [editingNode, setEditingNode] = useState<OutlineNode | null>(null);
+  const [genLoading, setGenLoading] = useState(false);
   const [form, setForm] = useState({ title: '', level: 'chapter', content: '', word_count_target: 2000, parent_id: '' });
 
   useEffect(() => { if (id) fetchOutlines(id); }, [id, fetchOutlines]);
+
+  const handleGenerateOutline = async () => {
+    setGenLoading(true);
+    try {
+      const res = await generateApi.outline(id);
+      if (res.success && res.data?.volumes) {
+        // 将 AI 生成的大纲节点逐个创建
+        for (const vol of res.data.volumes) {
+          const volNode = await createOutline(id, {
+            level: 'volume', title: vol.title, content: vol.summary || '', word_count_target: 0,
+          });
+          for (const ch of vol.chapters || []) {
+            await createOutline(id, {
+              parent_id: volNode.id, level: 'chapter', title: ch.title,
+              content: ch.summary || '', word_count_target: ch.word_count_target || 2000,
+            });
+          }
+        }
+        showToast('success', `AI 生成了 ${res.data.volumes.length} 卷大纲`);
+        fetchOutlines(id);
+      }
+    } catch (err: unknown) {
+      showToast('error', err instanceof Error ? err.message : '生成失败');
+    }
+    setGenLoading(false);
+  };
 
   const buildTree = (nodes: OutlineNode[]): OutlineNode[] => {
     const map = new Map<string, OutlineNode>();
@@ -109,9 +137,14 @@ export default function OutlinesPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">大纲管理</h1>
-          <Button onClick={() => { setEditingNode(null); setForm({ title: '', level: 'chapter', content: '', word_count_target: 2000, parent_id: '' }); setShowModal(true); }}>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleGenerateOutline} loading={genLoading}>
+              <Sparkles size={16} /> AI 生成大纲
+            </Button>
+            <Button onClick={() => { setEditingNode(null); setForm({ title: '', level: 'chapter', content: '', word_count_target: 2000, parent_id: '' }); setShowModal(true); }}>
             <Plus size={18} /> 添加节点
           </Button>
+          </div>
         </div>
 
         <Modal open={showModal} onClose={() => setShowModal(false)} title={editingNode ? '编辑大纲节点' : '添加大纲节点'}>
