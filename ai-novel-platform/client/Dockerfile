@@ -1,14 +1,23 @@
-FROM node:20-alpine AS build
+# 前端生产环境
+FROM node:20-alpine AS builder
+
 WORKDIR /app
-COPY package.json package-lock.json ./
+
+COPY package.json package-lock.json* ./
 RUN npm ci
+
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS run
+# 运行阶段
+FROM node:20-alpine
+
 WORKDIR /app
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/package.json ./
-RUN npm ci --only=production
-CMD ["npm", "run", "start"]
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
