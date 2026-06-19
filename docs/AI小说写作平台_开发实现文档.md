@@ -118,6 +118,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │   ├── user.py
 │       │   ├── book.py
 │       │   ├── outline.py
+│       │   ├── detailed_outline.py  # ★NEW: 细纲模型
 │       │   ├── character.py
 │       │   ├── chapter.py
 │       │   ├── review.py
@@ -137,6 +138,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │   ├── auth.py
 │       │   ├── books.py
 │       │   ├── outlines.py
+│       │   ├── detailed_outlines.py  # ★NEW: 细纲API
 │       │   ├── characters.py
 │       │   ├── chapters.py
 │       │   ├── review.py
@@ -208,9 +210,11 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │           ├── page.tsx    # 项目概览
 │       │           ├── outlines/
 │       │           │   └── page.tsx
-│       │           ├── characters/
-│       │           │   └── page.tsx
-│       │           ├── chapters/
+│       │   ├── characters/
+│       │   │   └── page.tsx
+│       │   ├── detailed-outlines/   # ★NEW
+│       │   │   └── page.tsx         # 细纲创作页
+│       │   ├── chapters/
 │       │           │   └── page.tsx
 │       │           ├── chapter/
 │       │           │   └── [chapterId]/
@@ -266,6 +270,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │   │   ├── auth.ts         # 认证 API
 │       │   │   ├── books.ts        # 项目 API
 │       │   │   ├── outlines.ts     # 大纲 API
+│       │   │   ├── detailed-outlines.ts  # ★NEW: 细纲 API
 │       │   │   ├── characters.ts   # 角色 API
 │       │   │   ├── chapters.ts     # 章节 API
 │       │   │   ├── review.ts       # 审查 API
@@ -544,6 +549,7 @@ async def init_db():
         from app.models.user import User
         from app.models.book import Book
         from app.models.outline import Outline
+        from app.models.detailed_outline import DetailedOutline
         from app.models.character import Character
         from app.models.chapter import Chapter, ChapterVersion
         from app.models.review import Review
@@ -684,6 +690,51 @@ class Outline(Base):
 
     book = relationship("Book", back_populates="outlines")
     children = relationship("Outline", backref="parent", remote_side=[id], cascade="all, delete-orphan")
+```
+
+#### models/detailed_outline.py
+
+```python
+# server/app/models/detailed_outline.py
+"""细纲模型 — 描述每章每个场景的具体写法"""
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, Integer, DateTime, JSON, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.orm import relationship
+from app.database import Base
+
+
+class DetailedOutline(Base):
+    __tablename__ = "detailed_outlines"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    book_id = Column(UUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
+    chapter_id = Column(UUID(as_uuid=True), ForeignKey("chapters.id", ondelete="CASCADE"))
+    outline_id = Column(UUID(as_uuid=True), ForeignKey("outlines.id", ondelete="SET NULL"))
+
+    # 场景基础信息
+    scene_index = Column(Integer, nullable=False, default=0)   # 场景序号
+    title = Column(String(200), nullable=False)                 # 场景标题
+    function = Column(String(30), default="")                   # 功能定位: 冲突建立/铺垫/爽点/过渡/收尾
+    emotion = Column(String(20), default="")                    # 情感基调: 紧张/轻松/压抑/激昂/悲壮
+    word_count_target = Column(Integer, default=0)              # 目标字数
+
+    # 关联信息
+    characters = Column(ARRAY(UUID), default=list)              # 出场角色ID列表
+    location = Column(String(200), default="")                  # 发生地点
+    day_number = Column(Integer, default=0)                     # 时间线第几天
+
+    # 内容描述
+    description = Column(Text, default="")                      # 场景描述
+    key_dialogues = Column(Text, default="")                   # 关键对话/金句
+    pleasure_types = Column(ARRAY(String), default=list)        # 爽点类型: 打脸/逆袭/收获/反转/揭露/升级
+
+    status = Column(String(20), default="draft")                # 草稿/已完成
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    book = relationship("Book")
 ```
 
 #### models/character.py
@@ -885,13 +936,14 @@ class AnalysisRecord(Base):
 ```python
 # server/app/api/router.py
 from fastapi import APIRouter
-from app.api import auth, books, outlines, characters, chapters, review, analysis, timeline, model_config
+from app.api import auth, books, outlines, detailed_outlines, characters, chapters, review, analysis, timeline, model_config
 
 api_router = APIRouter()
 
 api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
 api_router.include_router(books.router, prefix="/books", tags=["项目管理"])
 api_router.include_router(outlines.router, prefix="/books", tags=["大纲管理"])
+api_router.include_router(detailed_outlines.router, prefix="/books", tags=["细纲管理"])
 api_router.include_router(characters.router, prefix="/books", tags=["角色管理"])
 api_router.include_router(chapters.router, prefix="/books", tags=["章节管理"])
 api_router.include_router(review.router, prefix="/review", tags=["审查评分"])
@@ -1356,6 +1408,197 @@ class ModelConfigResponse(BaseModel):
     scenes: list[str]
     is_active: bool
     sort_order: int
+
+    model_config = {"from_attributes": True}
+```
+
+---
+
+### 细纲管理 API
+
+```python
+# server/app/api/detailed_outlines.py
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.database import get_db
+from app.models.detailed_outline import DetailedOutline
+from app.schemas.detailed_outline import (
+    DetailedOutlineCreate, DetailedOutlineUpdate, DetailedOutlineResponse
+)
+from app.middleware.auth import get_current_user
+
+router = APIRouter()
+
+
+@router.get("/{book_id}/detailed-outlines", response_model=list[DetailedOutlineResponse])
+async def list_detailed_outlines(
+    book_id: str,
+    chapter_id: str = None,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取细纲列表，可按章节筛选"""
+    query = select(DetailedOutline).where(DetailedOutline.book_id == book_id)
+    if chapter_id:
+        query = query.where(DetailedOutline.chapter_id == chapter_id)
+    query = query.order_by(DetailedOutline.scene_index)
+    result = await db.execute(query)
+    outlines = result.scalars().all()
+    return [DetailedOutlineResponse.model_validate(o) for o in outlines]
+
+
+@router.post("/{book_id}/detailed-outlines", response_model=DetailedOutlineResponse, status_code=201)
+async def create_detailed_outline(
+    book_id: str,
+    data: DetailedOutlineCreate,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """创建细纲场景"""
+    result = await db.execute(
+        select(DetailedOutline)
+        .where(
+            DetailedOutline.book_id == book_id,
+            DetailedOutline.chapter_id == data.chapter_id,
+        )
+        .order_by(DetailedOutline.scene_index.desc())
+        .limit(1)
+    )
+    last = result.scalar_one_or_none()
+    scene_index = (last.scene_index + 1) if last else 1
+
+    outline = DetailedOutline(
+        book_id=book_id,
+        chapter_id=data.chapter_id,
+        scene_index=scene_index,
+        title=data.title,
+        function=data.function,
+        emotion=data.emotion,
+        word_count_target=data.word_count_target or 0,
+        characters=data.characters or [],
+        location=data.location or "",
+        day_number=data.day_number or 0,
+        description=data.description or "",
+        key_dialogues=data.key_dialogues or "",
+        pleasure_types=data.pleasure_types or [],
+    )
+    db.add(outline)
+    await db.commit()
+    await db.refresh(outline)
+    return DetailedOutlineResponse.model_validate(outline)
+
+
+@router.put("/detailed-outlines/{outline_id}", response_model=DetailedOutlineResponse)
+async def update_detailed_outline(
+    outline_id: str,
+    data: DetailedOutlineUpdate,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新细纲场景"""
+    result = await db.execute(
+        select(DetailedOutline).where(DetailedOutline.id == outline_id)
+    )
+    outline = result.scalar_one_or_none()
+    if not outline:
+        raise HTTPException(status_code=404, detail="细纲不存在")
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(outline, key, value)
+    await db.commit()
+    await db.refresh(outline)
+    return DetailedOutlineResponse.model_validate(outline)
+
+
+@router.delete("/detailed-outlines/{outline_id}", status_code=204)
+async def delete_detailed_outline(
+    outline_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除细纲场景"""
+    result = await db.execute(
+        select(DetailedOutline).where(DetailedOutline.id == outline_id)
+    )
+    outline = result.scalar_one_or_none()
+    if not outline:
+        raise HTTPException(status_code=404, detail="细纲不存在")
+    await db.delete(outline)
+    await db.commit()
+
+
+@router.put("/detailed-outlines/reorder")
+async def reorder_detailed_outlines(
+    items: list[dict],
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量排序场景"""
+    for item in items:
+        result = await db.execute(
+            select(DetailedOutline).where(DetailedOutline.id == item["id"])
+        )
+        scene = result.scalar_one_or_none()
+        if scene:
+            scene.scene_index = item.get("scene_index", scene.scene_index)
+    await db.commit()
+    return {"status": "ok"}
+```
+
+#### Pydantic Schema
+
+```python
+# server/app/schemas/detailed_outline.py
+from pydantic import BaseModel
+from typing import Optional
+
+
+class DetailedOutlineCreate(BaseModel):
+    chapter_id: str
+    title: str
+    function: str = ""
+    emotion: str = ""
+    word_count_target: int = 0
+    characters: list[str] = []
+    location: str = ""
+    day_number: int = 0
+    description: str = ""
+    key_dialogues: str = ""
+    pleasure_types: list[str] = []
+
+
+class DetailedOutlineUpdate(BaseModel):
+    title: Optional[str] = None
+    function: Optional[str] = None
+    emotion: Optional[str] = None
+    word_count_target: Optional[int] = None
+    characters: Optional[list[str]] = None
+    location: Optional[str] = None
+    day_number: Optional[int] = None
+    description: Optional[str] = None
+    key_dialogues: Optional[str] = None
+    pleasure_types: Optional[list[str]] = None
+    status: Optional[str] = None
+
+
+class DetailedOutlineResponse(BaseModel):
+    id: str
+    book_id: str
+    chapter_id: str
+    scene_index: int
+    title: str
+    function: str
+    emotion: str
+    word_count_target: int
+    characters: list[str]
+    location: str
+    day_number: int
+    description: str
+    key_dialogues: str
+    pleasure_types: list[str]
+    status: str
+    created_at: str
 
     model_config = {"from_attributes": True}
 ```
@@ -2090,10 +2333,13 @@ async def review_chapter_endpoint(
 ┌─────────────────────┐
 │  📋  项目概览        │
 │  📑  大纲管理        │
+│  📜  细纲创作   ★NEW │
 │  👥  角色管理        │
 │  📝  章节管理        │
 │  🔍  拆书分析        │
 │  ⏱️  时间线          │
+│  ─────────────────── │
+│  ⚙️  模型配置         │
 └─────────────────────┘
 ```
 
@@ -2210,28 +2456,53 @@ async def review_chapter_endpoint(
 - [取消] 次要按钮（白色背景，边框）
 - [创建] 主按钮，全宽
 
-#### 5.3.6 项目概览 (`/book/[id]`)
+#### 5.3.6 项目工作台 (`/book/[id]`)
 
 **URL**: `/book/[id]`
 
 **布局**：Topbar + Sidebar + Main Content
 
+**设计目标**：一目了然的写作进度 + 下一步操作引导
+
 **内容**：
-1. 项目基本信息：
-   - 标题（text-2xl，#111827）
-   - 题材标签 + 状态标签
-   - 简介（灰色文字）
-2. 统计卡片行（4 张并排）：
-   - 总字数：大数字 + 小标题
-   - 章节数：大数字 + 小标题
-   - 角色数：大数字 + 小标题
-   - 大纲节点数：大数字 + 小标题
-3. 快捷操作区：
-   - [写新章节] 主按钮
-   - [管理大纲] 次要按钮
-   - [管理角色] 次要按钮
-   - [拆书分析] 次要按钮
-4. 最近活动列表（可选）
+
+1. **项目标题区**：
+   - 标题（text-2xl，#111827）+ 题材标签 + 状态标签
+   - 项目简介（灰色小字）
+   - 右上角：[项目设置] 齿轮图标按钮
+
+2. **写作进度条**（全宽卡片，白色背景，圆角 lg，阴影 sm，padding 24px）：
+   ```
+   ┌─────────────────────────────────────────────────────────┐
+   │  写作进度                       已完 成 3/20 章         │
+   │  ████████████░░░░░░░░░░░░░░░░░  15%                    │
+   │                                                         │
+   │  📑 大纲  ● 已完成 (8/8 节点)       → 查看大纲         │
+   │  📜 细纲  ● 已完成 (5/5 场景)       → 查看细纲         │
+   │  👥 角色  ● 已完成 (4/4 角色)       → 管理角色         │
+   │  📝 正文  ○ 进行中 (3/20 章)        → 继续写作         │
+   │  ✅ 审查  ○ 待审查 (1/20 章已通过)  → 审查章节         │
+   └─────────────────────────────────────────────────────────┘
+   ```
+   - 每个进度项左侧：● 已完成（绿色） / ○ 进行中（蓝色） / ○ 未开始（灰色）
+   - 右侧链接点击跳转到对应页面
+   - 自动推荐下一步："下一步：写第4章"（黄色高亮）
+
+3. **快捷操作卡片组**（3 张并排，白色背景，圆角 lg，阴影 sm）：
+   ```
+   ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+   │ ✍️ 写新章节   │ │ 🤖 AI续写    │ │ 📊 创作统计  │
+   │ 创建下一章    │ │ 继续最近章节  │ │ 总字数: 6.2w│
+   │ [开始写作]    │ │ [继续写作]    │ │ 本周: 0.8w  │
+   └──────────────┘ └──────────────┘ └──────────────┘
+   ```
+   - 卡片 1：如果存在未完成的草稿，显示"继续写作"，否则显示"写新章节"
+   - 卡片 2：最近编辑章节的快速入口
+   - 卡片 3：创作统计（总字数、本周新增字数、连续写作天数）
+
+4. **最近章节列表**：
+   - 最近修改的 5 个章节
+   - 每项：章节标题 + 状态标签 + 字数 + 更新时间 + [编辑] 链接
 
 #### 5.3.7 大纲管理页 (`/book/[id]/outlines`)
 
@@ -2281,7 +2552,61 @@ async def review_chapter_endpoint(
 - 每项评分列表
 - 改进建议（高亮显示）
 
-#### 5.3.8 角色管理页 (`/book/[id]/characters`)
+#### 5.3.8 细纲创作页 (`/book/[id]/detailed-outlines`)
+
+**URL**: `/book/[id]/detailed-outlines`
+
+**设计目的**：在"大纲"（卷/章/节结构）和"正文写作"之间增加一层——描述每章每个场景的具体写法和节奏
+
+**布局**：Topbar + Sidebar + Main Content
+
+**内容**：
+
+1. **章节选择器**（顶部下拉或标签页）：
+   - 下拉列出所有章节（从大纲中同步），选择一个章节编辑其细纲
+   - 显示当前章节字数目标和状态
+
+2. **场景列表**（从上到下排列）：
+   - 每个场景为一个卡片，白色背景，圆角 md，阴影 sm，margin-bottom 16px
+   - 场景卡片可拖拽排序（上下拖动调整顺序）
+   - 顶部：[添加场景] 按钮 + [AI 生成细纲] 按钮
+
+3. **单个场景卡片内容**：
+   ```
+   ┌──────────────────────────────────────────────────────────┐
+   │  ──── 场景 1 ────  [复制] [删除] [↑] [↓]               │
+   │                                                          │
+   │  标题: [场景标题]                  目标字数: [___] 字    │
+   │  功能定位: [下拉: 冲突建立/铺垫/爽点/过渡/收尾]         │
+   │  情感基调: [下拉: 紧张/轻松/压抑/激昂/悲壮]             │
+   │                                                          │
+   │  出场角色: [多选标签] (来自角色管理的数据)               │
+   │  发生地点: [text input]                                  │
+   │  时间点:   第 [___] 天（从时间线选择或手动输入）         │
+   │                                                          │
+   │  == 场景描述 ==                                          │
+   │  [textarea, placeholder: "这个场景要写什么…"]           │
+   │                                                          │
+   │  == 关键对话 / 金句 ==                                   │
+   │  [textarea, placeholder: "希望出现的对话或金句…"]       │
+   │                                                          │
+   │  == 爽点设计 ==                                          │
+   │  [多选: 打脸/逆袭/收获/反转/揭露/升级/打脸/装逼]        │
+   │                                                          │
+   │  状态: [草稿] [已完成]                                   │
+   │  ────────────────────────────────────────────────────    │
+   │  [AI 扩写此场景] [AI 优化描述]                            │
+   └──────────────────────────────────────────────────────────┘
+   ```
+
+4. **AI 生成细纲对话框**：
+   - 选择要生成细纲的章节
+   - [生成] 按钮
+   - 生成后自动填充场景卡片列表
+
+5. **细纲与正文的关联**：写作正文时，Writer Agent 自动读取本章的细纲场景列表作为上下文注入
+
+#### 5.3.9 角色管理页 (`/book/[id]/characters`)
 
 **URL**: `/book/[id]/characters`
 
@@ -2384,8 +2709,16 @@ async def review_chapter_endpoint(
 │  │                                                      │     │
 │  │  AI 辅助面板                                         │     │
 │  │  ─────────────────                                   │     │
-│  │  [AI 续写] [AI 扩写] [AI 压缩]                      │     │
-│  │  [去AI味]  [对话优化] [审查评分]                    │     │
+│  │  ── 写作中 ──                                        │     │
+│  │  [AI 续写]     从光标位置继续写                       │     │
+│  │  [AI 扩写]     扩写选中段落                           │     │
+│  │  [AI 压缩]     压缩选中段落                           │     │
+│  │  [AI 补全]     补全不完整的句子                       │     │
+│  │                                                      │     │
+│  │  ── 写作后 ──                                        │     │
+│  │  [去AI味检测]  检测AI腔+语感评分                      │     │
+│  │  [对话优化]    优化对话口语化                         │     │
+│  │  [审查评分]    12维度审查评分                          │     │
 │  │                                                      │     │
 │  │  字数进度条: ████████░░ 2400/3000                    │     │
 │  │                                                      │     │
@@ -2500,7 +2833,25 @@ async def review_chapter_endpoint(
 5. **底部操作**：
    - [关闭] 次要按钮
    - [重新审查] 文字按钮（若分数 < 70 显示）
-   - [去修改] 主按钮（若分数 < 70 显示，跳转到编辑器）
+   - [去修改] 主按钮 — 若分数 < 85 显示，点击跳转到编辑器，并自动定位到第一个问题段落
+
+6. **修改闭环流程**（点击 [去修改] 后）：
+   ```
+   用户点击 [去修改]
+       ↓
+   跳转到编辑器页
+       ↓
+   编辑器自动打开审查侧栏（显示所有问题列表）
+       ↓
+   用户点击某个问题 → 编辑器自动滚动定位到对应段落并高亮
+       ↓
+   用户修改完成后 → 点击 [重新审查] 再次评分
+       ↓
+   评分 ≥85 → 章节状态自动变为"已完成"
+   ```
+   - 审查侧栏（编辑器内）：左侧问题列表，每条可点击跳转到原文位置
+   - 原文高亮标注：问题对应段落用黄色背景色高亮
+   - 修改完成后自动保存，点击"重新审查"触发新一轮评分
 
 #### 5.3.12 拆书分析页 (`/book/[id]/analysis`)
 
@@ -2979,6 +3330,31 @@ class ContextAssembler:
             for e in reversed(events):
                 chars = "、".join([str(cid)[:8] for cid in e.involved_chars]) if e.involved_chars else ""
                 parts.append(f"  第{e.day_number}天 | {e.event_desc} | 涉及：{chars}")
+
+        # === 第四层：细纲场景注入 ===
+        if chapter and chapter.id:
+            from app.models.detailed_outline import DetailedOutline
+            result = await self.db.execute(
+                select(DetailedOutline)
+                .where(
+                    DetailedOutline.chapter_id == chapter.id,
+                    DetailedOutline.status == "done",
+                )
+                .order_by(DetailedOutline.scene_index)
+            )
+            scenes = result.scalars().all()
+            if scenes:
+                parts.append("\n=== 本章细纲场景 ===")
+                for s in scenes:
+                    chars = "、".join([str(c)[:8] for c in s.characters]) if s.characters else ""
+                    pleasure = "、".join(s.pleasure_types) if s.pleasure_types else "无"
+                    parts.append(
+                        f"  场景{s.scene_index}【{s.title}】"
+                        f"功能：{s.function} | 字数目标：{s.word_count_target} | "
+                        f"出场：{chars} | 爽点：{pleasure}"
+                    )
+                    if s.description:
+                        parts.append(f"    → {s.description}")
 
         return "\n".join(parts)
 ```

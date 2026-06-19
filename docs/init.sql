@@ -212,6 +212,54 @@ CREATE TABLE analysis_records (
 CREATE INDEX idx_analysis_book ON analysis_records(book_id);
 
 -- ============================================================
+-- 11. 用户模型配置表
+-- ============================================================
+CREATE TABLE user_model_configs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    provider VARCHAR(50) DEFAULT 'openai-compatible',
+    base_url VARCHAR(500) NOT NULL,
+    api_key VARCHAR(500) NOT NULL,
+    model_name VARCHAR(100) NOT NULL,
+    scenes JSONB DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_model_config_user ON user_model_configs(user_id);
+
+-- ============================================================
+-- 12. 细纲表
+-- ============================================================
+CREATE TABLE detailed_outlines (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    chapter_id UUID REFERENCES chapters(id) ON DELETE CASCADE,
+    outline_id UUID REFERENCES outlines(id) ON DELETE SET NULL,
+    scene_index INTEGER NOT NULL DEFAULT 0,
+    title VARCHAR(200) NOT NULL,
+    function VARCHAR(30) DEFAULT '',
+    emotion VARCHAR(20) DEFAULT '',
+    word_count_target INTEGER DEFAULT 0,
+    characters UUID[] DEFAULT '{}',
+    location VARCHAR(200) DEFAULT '',
+    day_number INTEGER DEFAULT 0,
+    description TEXT DEFAULT '',
+    key_dialogues TEXT DEFAULT '',
+    pleasure_types TEXT[] DEFAULT '{}',
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'done')),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_detailed_outlines_book ON detailed_outlines(book_id);
+CREATE INDEX idx_detailed_outlines_chapter ON detailed_outlines(chapter_id);
+CREATE INDEX idx_detailed_outlines_scene ON detailed_outlines(chapter_id, scene_index);
+
+-- ============================================================
 -- 全部建表完成
--- 共 10 张表
+-- 共 12 张表
 -- ============================================================
