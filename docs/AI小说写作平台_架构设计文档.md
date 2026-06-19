@@ -1,251 +1,232 @@
 # AI小说写作平台 - 架构设计文档
 
-## 一、系统架构总览
+## 一、精简化技术栈
 
-### 1.1 整体架构图
+### 1.1 最终技术选型
+
+| 层级 | 技术选型 | 说明 |
+|-----|---------|------|
+| 前端框架 | Next.js 16 + Tailwind CSS | shadcn/ui 组件库 |
+| 富文本编辑器 | TipTap (React) | 轻量、可扩展 |
+| 树形组件 | react-arborist | 大纲拖拽 |
+| 状态管理 | Zustand | 极简状态管理 |
+| 后端框架 | Python FastAPI | 异步高性能 |
+| ORM | SQLAlchemy 2.0 | Python 最成熟 ORM |
+| **数据库** | **PostgreSQL 16 + pgvector** | **唯一外部依赖** |
+| AI 调用 | **直接 HTTP 请求** (替代 LangChain) | 减少依赖，更可控 |
+| 缓存 | **内存缓存** (替代 Redis) | 后端进程内完成 |
+| 认证 | JWT | 无状态，无需额外服务 |
+| 部署 | **Docker Compose** | **仅 3 个容器** |
+
+### 1.2 精简前后对比
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          前端 (Next.js 16)                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │ 拆书页面  │  │ 大纲页面  │  │ 角色页面  │  │  章节编辑器       │  │
-│  │ BookAnalysis│ OutlineMgmt│ CharacterMgmt│ ChapterEditor      │  │
-│  └─────┬────┘  └─────┬────┘  └─────┬────┘  └────────┬──────────┘  │
-│        └──────────────┴──────────────┴────────────────┘             │
-│                              │                                      │
-│                        API 客户端层 (fetch/axios)                    │
-└──────────────────────────────┼──────────────────────────────────────┘
-                               │ HTTP/SSE
-┌──────────────────────────────┼──────────────────────────────────────┐
-│                    后端 (Python FastAPI)                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │ 拆书服务  │  │ 大纲服务  │  │ 角色服务  │  │  章节生成服务     │  │
-│  │ BookAnalysis│ OutlineSvc │ CharacterSvc│ ChapterGenSvc      │  │
-│  └─────┬────┘  └─────┬────┘  └─────┬────┘  └────────┬──────────┘  │
-│        └──────────────┴──────────────┴────────────────┘             │
-│                              │                                      │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                   AI 服务层 (AI Service Layer)               │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
-│  │  │DeepSeek  │  │  Kimi    │  │  通义千问 │  │ 模型路由 │   │   │
-│  │  │ 适配器   │  │  适配器  │  │  适配器   │  │  调度器  │   │   │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              │                                      │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │               上下文引擎 (Context Engine)                     │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
-│  │  │章节摘要  │  │ 大纲注入  │  │ 角色注入  │  │ RAG检索  │   │   │
-│  │  │ Summarizer│ OutlineInj│ CharacterInj│ Retriever    │   │   │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              │                                      │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │              审查引擎 (Review Engine)                        │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
-│  │  │大纲审查  │  │正文审查  │  │逻辑审查  │  │ 人设审查  │   │   │
-│  │  │ OutlineRv│ ChapterRv │ LogicCheck│ CharCheck │   │   │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              │                                      │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │           生成控制引擎 (Generation Control Engine)            │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
-│  │  │字数控制  │  │去AI味    │  │对话优化  │  │时间线    │   │   │
-│  │  │WordCtrl  │  │AIFlavor  │  │Dialogue  │  │Timeline  │   │   │
-│  │  │          │  │Remover   │  │Optimizer │  │Checker   │   │   │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────┼──────────────────────────────────────┘
-                               │
-┌──────────────────────────────┼──────────────────────────────────────┐
-│                       数据库 (PostgreSQL + pgvector)                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │  books   │  │ outlines │  │characters│  │    chapters       │  │
-│  │ 项目表   │  │ 大纲表   │  │ 角色表   │  │   章节表          │  │
-│  └──────────┘  └──────────┘  └──────────┘  └───────────────────┘  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │analysis  │  │ reviews  │  │versions  │  │   embeddings      │  │
-│  │拆书记录  │  │审查记录  │  │版本表    │  │  向量索引         │  │
-│  └──────────┘  └──────────┘  └──────────┘  └───────────────────┘  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                         │
-│  │timeline  │  │char_state│  │style_ref │                         │
-│  │时间线    │  │角色状态  │  │风格档案  │                         │
-│  └──────────┘  └──────────┘  └──────────┘                         │
-└─────────────────────────────────────────────────────────────────────┘
+精简前（5个服务）                    精简后（3个服务）
+┌──────────┐                       ┌──────────┐
+│  Frontend │                       │  Frontend │
+├──────────┤                       ├──────────┤
+│  Backend  │                       │  Backend  │
+├──────────┤                       ├──────────┤
+│PostgreSQL│         ──────►       │PostgreSQL│
+├──────────┤                       └──────────┘
+│  Redis    │  (已移除)
+├──────────┤
+│ LangChain │  (已移除，改用直连API)
+└──────────┘
 ```
 
-### 1.2 技术栈选择
+**精简结果**：
+- 外部服务从 4 个减到 **1 个**（仅 PostgreSQL）
+- 额外中间件从 2 个减到 **0 个**（Redis 去掉，LangChain 去掉）
+- Docker Compose 仅需管理 **3 个容器**
+- 所有 AI API 调用通过 Backend 直连，无需额外代理
 
-| 层级 | 技术选型 | 版本 | 选型理由 |
-|-----|---------|------|---------|
-| 前端框架 | Next.js | 16 | React 全栈框架，SSR/SSG 支持好 |
-| UI 组件 | Tailwind CSS + shadcn/ui | latest | 快速构建美观 UI |
-| 富文本编辑器 | TipTap / Novel Editor | latest | 基于 ProseMirror，适合长文编辑 |
-| 树形组件 | react-arborist / dnd-kit | latest | 拖拽排序树形大纲 |
-| 状态管理 | Zustand | latest | 轻量级状态管理 |
-| 后端框架 | Python FastAPI | latest | 异步高性能，AI 生态丰富 |
-| ORM | SQLAlchemy 2.0 + Alembic | latest | 最成熟的 Python ORM |
-| 数据库 | PostgreSQL | 16 | 支持向量检索 |
-| 向量检索 | pgvector | latest | PostgreSQL 原生插件 |
-| AI SDK | LangChain / LiteLLM | latest | 统一多模型调用 |
-| 缓存 | Redis | 7 | 缓存 AI 响应 |
-| 认证 | JWT + OAuth2 | - | 无状态认证 |
-| 部署 | Docker + Docker Compose | - | 一键部署 |
+### 1.3 为什么可以去掉这些
+
+| 移除项 | 替代方案 | 理由 |
+|-------|---------|------|
+| Redis | 后端内存缓存 + PostgreSQL | 写作平台对缓存时效性要求不高，用 Python dict 或 PostgreSQL 表即可 |
+| LangChain | 直接 HTTP 调用 AI API | 项目只调用 2-3 个模型，LangChain 带来的抽象层反而增加了复杂度 |
+| Alembic | SQLAlchemy `create_all()` | 初期开发不用复杂迁移工具，用 ORM 自动建表更快捷 |
 
 ---
 
-## 二、详细数据模型设计
-
-### 2.1 ER 图
+## 二、系统架构图
 
 ```
-┌────────────────┐       ┌──────────────────┐       ┌──────────────────┐
-│     books      │       │    outlines       │       │   characters     │
-│────────────────│       │──────────────────│       │──────────────────│
-│ id (PK)        │──1:N──│ id (PK)           │       │ id (PK)          │
-│ user_id (FK)   │       │ book_id (FK)      │       │ book_id (FK)     │
-│ title          │       │ parent_id (FK)    │──1:N──│ name             │
-│ genre          │       │ level             │       │ role_type        │
-│ style          │       │ title             │       │ personality      │
-│ synopsis       │       │ content           │       │ background       │
-│ target_platform│       │ plot_points (JSON)│       │ motivation       │
-│ created_at     │       │ word_count_target │       │ growth_arc (JSON)│
-│ updated_at     │       │ sort_order        │       │ relationships    │
-└────────────────┘       │ created_at        │       │ speech_profile   │
-       │                  │ updated_at        │       │ (JSON) - 语音特征 │
-       │                  └──────────────────┘       │ created_at       │
-       │                                             └──────────────────┘
-       │                  ┌──────────────────┐
-       │                  │   chapters        │
-       │                  │──────────────────│
-       │──1:N─────────────│ id (PK)           │
-       │                  │ book_id (FK)      │
-       │                  │ outline_id (FK)   │
-       │                  │ title             │
-       │                  │ content (TEXT)    │
-       │                  │ ai_summary        │
-       │                  │ word_count        │
-       │                  │ word_count_target │
-       │                  │ characters (JSON) │
-       │                  │ key_events (JSON) │
-       │                  │ emotion_curve (INT[])│
-       │                  │ status            │
-       │                  │ sort_order        │
-       │                  │ created_at        │
-       │                  │ updated_at        │
-       │                  └──────────────────┘
-       │                         │
-       │                  ┌──────────────────┐
-       │                  │ chapter_versions  │
-       │                  │──────────────────│
-       │                  │ id (PK)          │
-       │                  │ chapter_id (FK)  │──1:N
-       │                  │ version_number   │
-       │                  │ content (TEXT)   │
-       │                  │ created_at       │
-       │                  └──────────────────┘
-       │
-       │    ┌──────────────────┐   ┌──────────────────┐
-       │    │  timeline_events │   │  char_state_log  │
-       │    │──────────────────│   │──────────────────│
-       │    │ id (PK)          │   │ id (PK)          │
-       │───N│ book_id (FK)     │   │ character_id (FK)│
-       │    │ chapter_id (FK)  │   │ chapter_id (FK)  │
-       │    │ day_number       │   │ state_snapshot   │
-       │    │ event_desc       │   │ (JSON)           │
-       │    │ involved_chars   │   │ created_at       │
-       │    │ location         │   └──────────────────┘
-       │    │ created_at       │
-       │    └──────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     Docker Compose                          │
+│                                                             │
+│  ┌──────────────────┐    ┌──────────────────┐               │
+│  │   Frontend (:3000)│    │   Backend (:8000) │               │
+│  │   Next.js 16      │◄──►│   FastAPI         │               │
+│  │   + Tailwind CSS  │    │   + SQLAlchemy    │               │
+│  └──────────────────┘    └───────┬──────────┘               │
+│                                  │                           │
+│  ┌──────────────────┐            │                           │
+│  │ PostgreSQL 16    │◄───────────┘                           │
+│  │ + pgvector       │                                        │
+│  └──────────────────┘                                        │
+│                                                             │
+│  外部服务（不占用容器，通过 HTTP 调用）：                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
+│  │ DeepSeek │  │   Kimi   │  │ 通义千问  │                   │
+│  │   API    │  │   API    │  │   API    │                   │
+│  └──────────┘  └──────────┘  └──────────┘                   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 新增表详细设计
+### 启动集群只需一条命令
 
-#### timeline_events (时间线事件表)
+```bash
+docker compose up -d
+# 启动后：
+# - 前端: http://localhost:3000
+# - 后端: http://localhost:8000
+# - API 文档: http://localhost:8000/docs
+```
+
+---
+
+## 三、数据模型设计
+
+### 3.1 核心表
+
+#### books (项目表)
 
 ```sql
-CREATE TABLE timeline_events (
+CREATE TABLE books (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    title VARCHAR(200) NOT NULL,
+    genre VARCHAR(50) NOT NULL,
+    style VARCHAR(50) DEFAULT 'default',
+    synopsis TEXT,
+    target_platform VARCHAR(50),
+    world_setting TEXT,
+    word_count_target INTEGER DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'draft',
+    ai_config JSONB DEFAULT '{}',
+    -- {"model": "deepseek", "temperature": 0.8}
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### outlines (大纲表)
+
+```sql
+CREATE TABLE outlines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-    chapter_id UUID REFERENCES chapters(id) ON DELETE CASCADE,
-    day_number INTEGER NOT NULL,           -- 故事中的第几天
-    event_desc VARCHAR(500) NOT NULL,       -- 事件描述
-    involved_chars UUID[] DEFAULT '{}',     -- 涉及角色ID列表
-    location VARCHAR(200),                  -- 发生地点
-    importance INTEGER DEFAULT 5,           -- 重要性 1-10
-    season VARCHAR(10),                     -- 季节标记
-    created_at TIMESTAMP DEFAULT NOW()
+    parent_id UUID REFERENCES outlines(id) ON DELETE CASCADE,
+    level VARCHAR(10) NOT NULL CHECK (level IN ('volume', 'chapter', 'section')),
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    plot_points JSONB DEFAULT '[]',
+    -- [{"type": "conflict", "desc": "..."}]
+    word_count_target INTEGER DEFAULT 0,
+    emotion_curve VARCHAR(20),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    ai_summary TEXT,
+    status VARCHAR(20) DEFAULT 'draft',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_timeline_book_day ON timeline_events(book_id, day_number);
-CREATE INDEX idx_timeline_chapter ON timeline_events(chapter_id);
+CREATE INDEX idx_outlines_book ON outlines(book_id);
+CREATE INDEX idx_outlines_parent ON outlines(parent_id);
+CREATE INDEX idx_outlines_sort ON outlines(book_id, sort_order);
 ```
 
-#### char_state_log (角色状态变更日志)
+#### characters (角色表 + 语音特征 合并)
 
 ```sql
-CREATE TABLE char_state_log (
+CREATE TABLE characters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-    chapter_id UUID REFERENCES chapters(id) ON DELETE CASCADE,
-    chapter_number INTEGER NOT NULL,
-    state_snapshot JSONB NOT NULL,          -- 角色状态快照
-    -- {
-    --   "age": 18,
-    --   "cultivation": "筑基后期",
-    --   "location": "青云宗",
-    --   "items": ["铁剑", "古玉"],
-    --   "hp": 100,
-    --   "mp": 80,
-    --   "relationships": {"lisi": "敌对"}
-    -- }
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_char_state_char ON char_state_log(character_id);
-CREATE INDEX idx_char_state_chapter ON char_state_log(chapter_id);
-```
-
-#### style_profiles (角色语音特征库)
-
-```sql
-CREATE TABLE speech_profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-    style_name VARCHAR(50) NOT NULL,        -- "直爽型"/"文雅型"/"冷面型"
-    formality_level FLOAT DEFAULT 0.5,      -- 0.0-1.0 正式度
-    avg_sentence_length INTEGER DEFAULT 8,  -- 平均句子长度（字）
-    tone_words TEXT[] DEFAULT '{}',          -- 常用语气词
-    favorite_words TEXT[] DEFAULT '{}',      -- 爱用词
-    forbidden_words TEXT[] DEFAULT '{}',     -- 禁用词
-    speech_pattern TEXT,                     -- 说话模式描述
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- 预设角色类型模板表
-CREATE TABLE speech_templates (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type_name VARCHAR(50) NOT NULL,         -- "豪爽大侠"/"文雅书生"/"市井小民"/...
-    formality_level FLOAT DEFAULT 0.5,
-    avg_sentence_length INTEGER DEFAULT 8,
-    tone_words TEXT[] DEFAULT '{}',
+    book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    age VARCHAR(20),
+    gender VARCHAR(10),
+    role_type VARCHAR(20) NOT NULL CHECK (
+        role_type IN ('protagonist', 'supporter', 'antagonist', 'extra')
+    ),
+    appearance TEXT,
+    personality TEXT,
+    background TEXT,
+    motivation TEXT,
+    growth_arc JSONB DEFAULT '[]',
+    -- [{"stage": "前期", "personality": "...", "ability": "..."}]
+    relationships JSONB DEFAULT '[]',
+    -- [{"target_char_id": "uuid", "type": "师徒", "intimacy": 80}]
+    -- ===== 语音特征（合并到角色表中，无需单独建表）=====
+    speech_style VARCHAR(30) DEFAULT '普通',     -- 参考预设类型
+    formality_level FLOAT DEFAULT 0.5,           -- 0-1 正式度
+    avg_sentence_len INTEGER DEFAULT 8,          -- 平均句长
     favorite_words TEXT[] DEFAULT '{}',
-    description TEXT,
-    example_dialogue TEXT
+    forbidden_words TEXT[] DEFAULT '{}',
+    tone_words TEXT[] DEFAULT '{}',
+    -- ============================================
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE INDEX idx_characters_book ON characters(book_id);
 ```
 
-#### reviews (审查记录表)
+#### chapters (章节表)
+
+```sql
+CREATE TABLE chapters (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    outline_id UUID REFERENCES outlines(id) ON DELETE SET NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT DEFAULT '',
+    ai_summary VARCHAR(500),
+    word_count INTEGER DEFAULT 0,
+    word_count_target INTEGER DEFAULT 0,
+    characters UUID[] DEFAULT '{}',
+    key_events JSONB DEFAULT '[]',
+    pleasure_points JSONB DEFAULT '[]',
+    -- [{"type": "打脸", "position": 200, "intensity": 8}]
+    status VARCHAR(20) DEFAULT 'draft' CHECK (
+        status IN ('draft', 'review', 'done')
+    ),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_chapters_book ON chapters(book_id);
+CREATE INDEX idx_chapters_sort ON chapters(book_id, sort_order);
+```
+
+#### chapter_versions (版本历史)
+
+```sql
+CREATE TABLE chapter_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chapter_id UUID NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_versions_chapter ON chapter_versions(chapter_id);
+```
+
+#### reviews (审查评分记录)
 
 ```sql
 CREATE TABLE reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-    target_type VARCHAR(20) NOT NULL,       -- 'outline' / 'chapter'
+    target_type VARCHAR(10) NOT NULL CHECK (target_type IN ('outline', 'chapter')),
     target_id UUID NOT NULL,
     overall_score INTEGER NOT NULL CHECK (overall_score >= 0 AND overall_score <= 100),
     passed BOOLEAN NOT NULL,
+    rewrite_required BOOLEAN DEFAULT FALSE,
     dimension_scores JSONB NOT NULL,
     -- {
     --   "剧情连贯性": {"score": 85, "issues": [...], "suggestions": "..."},
@@ -253,1070 +234,807 @@ CREATE TABLE reviews (
     --   ...
     -- }
     priority_issues JSONB DEFAULT '[]',
-    rewrite_required BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX idx_reviews_target ON reviews(target_type, target_id);
 ```
 
+#### timeline_events (时间线)
+
+```sql
+CREATE TABLE timeline_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    chapter_id UUID REFERENCES chapters(id) ON DELETE CASCADE,
+    day_number INTEGER NOT NULL,
+    event_desc VARCHAR(500) NOT NULL,
+    involved_chars UUID[] DEFAULT '{}',
+    season VARCHAR(10),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_timeline_book_day ON timeline_events(book_id, day_number);
+```
+
+#### char_state_log (角色状态日志)
+
+```sql
+CREATE TABLE char_state_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    chapter_id UUID REFERENCES chapters(id) ON DELETE CASCADE,
+    chapter_number INTEGER NOT NULL,
+    state_snapshot JSONB NOT NULL,
+    -- {
+    --   "age": 18, "cultivation": "筑基后期", "location": "青云宗",
+    --   "items": ["铁剑"], "hp": 100, "mp": 80
+    -- }
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_char_state_char ON char_state_log(character_id);
+```
+
+#### analysis_records (拆书记录)
+
+```sql
+CREATE TABLE analysis_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    book_id UUID REFERENCES books(id) ON DELETE SET NULL,
+    source_title VARCHAR(200) NOT NULL,
+    source_author VARCHAR(100),
+    structure_analysis JSONB,
+    character_analysis JSONB,
+    rhythm_analysis JSONB,
+    techniques JSONB,
+    templates JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 3.2 语音特征预设类型（系统常量，不建表）
+
+```python
+SPEECH_TEMPLATES = {
+    "豪爽大侠": {"formality": 0.3, "avg_len": 6,
+                 "tone_words": ["哈", "痛快", "兄弟"],
+                 "favorite": ["老子", "干", "走"]},
+    "文雅书生": {"formality": 0.8, "avg_len": 14,
+                 "tone_words": ["矣", "乎", "哉"],
+                 "favorite": ["确实", "不过", "依我之见"]},
+    "冷面高手": {"formality": 0.5, "avg_len": 4,
+                 "tone_words": [],
+                 "favorite": ["嗯", "走吧", "不必"]},
+    "活泼少女": {"formality": 0.2, "avg_len": 7,
+                 "tone_words": ["哎呀", "啦", "耶", "嘛"],
+                 "favorite": ["真的吗", "好好玩", "好耶"]},
+    "阴险反派": {"formality": 0.6, "avg_len": 10,
+                 "tone_words": ["呵呵", "有意思"],
+                 "favorite": ["走着瞧", "有趣", "慢慢来"]},
+    "市井小民": {"formality": 0.2, "avg_len": 6,
+                 "tone_words": ["得嘞", "您嘞"],
+                 "favorite": ["整啥", "可劲儿", "妥妥的"]},
+    "普通":     {"formality": 0.5, "avg_len": 8,
+                 "tone_words": ["啊", "呢", "吧"],
+                 "favorite": [], "forbidden": []}
+}
+```
+
+### 3.3 评分维度权重（系统常量）
+
+```python
+REVIEW_WEIGHTS = {
+    "剧情连贯性": 0.25,
+    "人设一致性": 0.20,
+    "爽点密度":   0.15,
+    "节奏控制":   0.15,
+    "对话质量":   0.10,
+    "去AI味语感": 0.10,
+    "时间线一致性": 0.05
+}
+# 总分 ≥ 85 自动通过
+# 总分 70-84 基本通过（附带建议）
+# 总分 60-69 不通过（建议重写）
+# 总分 < 60 强制重写
+```
+
 ---
 
-## 三、API 接口设计
+## 四、API 接口设计
 
-### 3.1 API 路由总览
+### 4.1 API 路由总览
 
 ```
 API 前缀: /api/v1
 
-认证相关:
-  POST   /auth/register              # 注册
-  POST   /auth/login                 # 登录
-  POST   /auth/refresh               # 刷新 Token
+认证:
+  POST /auth/register
+  POST /auth/login
+  POST /auth/refresh
 
 项目管理:
-  GET    /books                      # 获取项目列表
-  POST   /books                      # 创建项目
-  GET    /books/{id}                 # 获取项目详情
-  PUT    /books/{id}                 # 更新项目
-  DELETE /books/{id}                 # 删除项目
+  GET    /books
+  POST   /books
+  GET    /books/{id}
+  PUT    /books/{id}
+  DELETE /books/{id}
 
 大纲管理:
-  GET    /books/{id}/outlines        # 获取大纲树
-  POST   /books/{id}/outlines        # 创建大纲节点
-  PUT    /outlines/{id}              # 更新大纲节点
-  DELETE /outlines/{id}              # 删除大纲节点
-  PUT    /outlines/reorder           # 大纲节点排序
-  POST   /outlines/ai-generate       # AI 生成大纲
-  POST   /outlines/ai-extract        # AI 提取大纲（从已有作品）
-  POST   /outlines/ai-review         # AI 审查大纲
+  GET    /books/{id}/outlines          # 获取大纲树
+  POST   /books/{id}/outlines          # 创建节点
+  PUT    /outlines/{id}                # 更新节点
+  DELETE /outlines/{id}                # 删除节点
+  PUT    /outlines/reorder             # 排序
+  POST   /outlines/ai-generate         # AI 生成大纲
+  POST   /outlines/ai-extract          # AI 提取大纲
+  POST   /outlines/ai-review           # AI 审查大纲
 
 角色管理:
-  GET    /books/{id}/characters      # 获取角色列表
-  POST   /books/{id}/characters      # 创建角色
-  PUT    /characters/{id}            # 更新角色
-  DELETE /characters/{id}            # 删除角色
-  POST   /characters/ai-generate     # AI 生成角色
-  PUT    /characters/{id}/speech-profile  # 更新角色语音特征
-  GET    /speech-templates           # 获取预设角色类型模板
+  GET    /books/{id}/characters        # 角色列表
+  POST   /books/{id}/characters        # 创建角色
+  PUT    /characters/{id}              # 更新角色
+  DELETE /characters/{id}              # 删除角色
+  POST   /characters/ai-generate       # AI 生成角色
+  GET    /speech-templates             # 语音特征模板列表
 
 章节管理:
-  GET    /books/{id}/chapters        # 获取章节列表
-  POST   /books/{id}/chapters        # 创建章节
-  GET    /chapters/{id}              # 获取章节内容
-  PUT    /chapters/{id}              # 更新章节内容
-  DELETE /chapters/{id}              # 删除章节
-  POST   /chapters/{id}/generate     # AI 生成正文（SSE 流式，含字数控制）
-  POST   /chapters/{id}/expand       # AI 扩写
-  POST   /chapters/{id}/compress     # AI 压缩
-  POST   /chapters/{id}/de-ai        # AI 去AI味处理
+  GET    /books/{id}/chapters          # 章节列表
+  POST   /books/{id}/chapters          # 创建章节
+  GET    /chapters/{id}                # 获取内容
+  PUT    /chapters/{id}                # 更新内容
+  DELETE /chapters/{id}                # 删除章节
+  POST   /chapters/{id}/generate       # AI 生成正文 (SSE)
+  POST   /chapters/{id}/expand         # AI 扩写
+  POST   /chapters/{id}/compress       # AI 压缩
+  POST   /chapters/{id}/de-ai          # AI 去AI味
   POST   /chapters/{id}/optimize-dialogue  # AI 对话优化
 
 审查评分:
-  POST   /review/outline             # 审查大纲
-  POST   /review/chapter             # 审查正文（含7维度评分）
-  POST   /review/check-consistency   # 一致性检查（时间线+人设）
-  GET    /books/{id}/reviews         # 获取审查记录
+  POST   /review/chapter               # 审查章节评分
+  POST   /review/outline               # 审查大纲
+  POST   /review/check-consistency     # 一致性检查
+  GET    /books/{id}/reviews           # 审查记录
 
-时间线管理:
-  GET    /books/{id}/timeline        # 获取全局时间线
-  POST   /books/{id}/timeline/check  # 检查时间线一致性
-  GET    /books/{id}/char-state      # 获取角色状态
+时间线:
+  GET    /books/{id}/timeline          # 时间线
+  GET    /books/{id}/char-states       # 角色状态
 
 版本管理:
-  GET    /chapters/{id}/versions     # 获取版本列表
-  GET    /versions/{id}              # 获取版本内容
-  POST   /chapters/{id}/versions     # 创建新版本
-  POST   /versions/{id}/restore      # 回滚到指定版本
+  GET    /chapters/{id}/versions       # 版本列表
+  POST   /chapters/{id}/versions       # 创建版本
+  POST   /versions/{id}/restore        # 回滚
 
 拆书分析:
-  POST   /analysis/upload            # 上传作品进行拆书
-  POST   /analysis/paste             # 粘贴内容拆书
-  GET    /analysis/{id}              # 获取拆书报告
-  POST   /analysis/{id}/generate-template  # 基于拆书生成大纲模板
-
-提示词模板:
-  GET    /prompts                    # 获取模板列表
-  POST   /prompts                    # 创建模板
-  GET    /prompts/{id}               # 获取模板详情
-```
-
-### 3.2 关键 API 详细设计
-
-#### POST /api/v1/chapters/{id}/generate — AI 生成章节正文 (SSE，带字数控制)
-
-```
-请求:
-{
-    "model": "deepseek",
-    "word_count_target": 3000,        // 目标字数
-    "word_count_tolerance": 0.1,      // 允许误差 ±10%
-    "temperature": 0.8,
-    "style_hints": ["节奏紧凑", "对话生动"],
-    "enable_de_ai": true,             // 是否启用去AI味
-    "enable_dialogue_optimize": true  // 是否启用对话优化
-}
-
-SSE 事件流:
-event: context
-data: {"summary": "...", "characters": [...], "outline": "...", "word_budget": {...}}
-
-event: progress
-data: {"scene": "冲突爆发", "words_generated": 800, "target": 800, "percent": 100}
-
-event: progress
-data: {"scene": "势力介入", "words_generated": 650, "target": 700, "percent": 93}
-
-event: progress
-data: {"scene": "主角应对", "words_generated": 950, "target": 1000, "percent": 95}
-
-event: progress
-data: {"scene": "结尾悬念", "words_generated": 480, "target": 500, "percent": 96}
-
-event: complete
-data: {
-    "chapter_id": "uuid",
-    "word_count": 2880,
-    "target": 3000,
-    "deviation": "-4%",
-    "summary": "..."
-}
-```
-
-#### POST /api/v1/chapters/{id}/de-ai — 去AI味处理
-
-```
-请求:
-{
-    "aggressiveness": "medium",     // low / medium / high
-    "focus_areas": ["tone", "sentence_structure", "dialogue"]
-}
-
-响应:
-{
-    "original_text": "...",
-    "processed_text": "...",
-    "changes": [
-        {"from": "然而", "to": "可", "position": 156},
-        {"from": "他感到非常愤怒", "to": "他一拳砸在桌上，茶杯跳了起来", "position": 890},
-        {"from": "值得一提的是", "to": "(已删除)", "position": 2340}
-    ],
-    "flavor_score_before": 62,
-    "flavor_score_after": 88,
-    "removed_ai_words": 7,
-    "dialogue_percentage_before": "32%",
-    "dialogue_percentage_after": "43%",
-    "short_sentence_ratio_before": "22%",
-    "short_sentence_ratio_after": "35%"
-}
-```
-
-#### POST /api/v1/review/chapter — 章节审查评分
-
-```
-请求:
-{
-    "chapter_id": "uuid",
-    "review_dimensions": [
-        "剧情连贯性",
-        "人设一致性",
-        "爽点密度",
-        "节奏控制",
-        "对话质量",
-        "去AI味语感",
-        "时间线一致性"
-    ]
-}
-
-响应:
-{
-    "chapter_id": "uuid",
-    "review_id": "uuid",
-    "overall_score": 82,
-    "passed": true,
-    "rewrite_required": false,
-    "dimensions": {
-        "剧情连贯性": {
-            "score": 85,
-            "issues": [
-                {"severity": "low", "content": "第3段提到'上次的事'没有前文铺垫"}
-            ],
-            "suggestions": "建议在第1段增加一句交代"
-        },
-        "人设一致性": {
-            "score": 78,
-            "issues": [
-                {"severity": "medium", "content": "反派李四说话用词过于文雅"}
-            ],
-            "suggestions": "改得更粗犷一些"
-        },
-        "爽点密度": {
-            "score": 70,
-            "issues": [
-                {"severity": "medium", "content": "3000字仅1个爽点"}
-            ],
-            "suggestions": "中间增加小型冲突"
-        },
-        "节奏控制": {"score": 88, "issues": [], "suggestions": "节奏良好"},
-        "对话质量": {"score": 82, "issues": [], "suggestions": "基本自然"},
-        "去AI味语感": {
-            "score": 80,
-            "issues": [
-                {"severity": "low", "content": "出现2次'然而'、3次'值得一提的是'"}
-            ],
-            "suggestions": "替换为口语化表达"
-        },
-        "时间线一致性": {"score": 92, "issues": [], "suggestions": "时间线正确"}
-    },
-    "priority_issues": [
-        "反派李四的对话不符合人设（中）",
-        "本章仅1个爽点（中）"
-    ]
-}
-```
-
-#### POST /api/v1/books/{id}/timeline/check — 时间线一致性检查
-
-```
-请求:
-{
-    "chapter_outline": "主角在青云宗后山发现一个秘密洞穴...",
-    "outline_characters": ["张三", "李四"]
-}
-
-响应:
-{
-    "passed": true,
-    "warnings": [],
-    "timeline_context": {
-        "current_day": 15,
-        "season": "初夏",
-        "last_event": "宗门大比结束（第14天）",
-        "character_states": {
-            "张三": {"cultivation": "筑基后期", "location": "青云宗"},
-            "李四": {"cultivation": "筑基中期", "location": "青云宗"}
-        }
-    }
-}
-```
-
-#### POST /api/v1/chapters/{id}/optimize-dialogue — 对话优化
-
-```
-请求:
-{
-    "characters": ["张三", "李四"],
-    "optimization_level": "medium"
-}
-
-响应:
-{
-    "original_dialogue": "...",
-    "optimized_dialogue": "...",
-    "changes": [...],
-    "before_score": 65,
-    "after_score": 88,
-    "character_distinction": {
-        "before": 0.3,
-        "after": 0.8
-    }
-}
+  POST   /analysis/upload              # 上传拆书
+  POST   /analysis/paste               # 粘贴拆书
+  GET    /analysis/{id}                # 获取报告
+  POST   /analysis/{id}/gen-template   # 生成模板
 ```
 
 ---
 
-## 三、生成控制引擎详细设计
+## 五、核心服务代码架构
 
-### 3.1 字数控制子系统
+### 5.1 后端目录结构
 
-#### 字数预算分配器
+```
+server/
+├── app/
+│   ├── main.py                  # FastAPI 入口，注册路由
+│   ├── config.py                # 配置（读取环境变量）
+│   ├── database.py              # PostgreSQL 连接 + pgvector
+│   ├── models/                  # SQLAlchemy 模型
+│   │   ├── user.py
+│   │   ├── book.py
+│   │   ├── outline.py
+│   │   ├── character.py
+│   │   ├── chapter.py
+│   │   ├── review.py
+│   │   └── timeline.py
+│   ├── schemas/                 # Pydantic 校验
+│   │   ├── book.py
+│   │   ├── outline.py
+│   │   ├── character.py
+│   │   ├── chapter.py
+│   │   └── review.py
+│   ├── api/                     # 路由
+│   │   ├── auth.py
+│   │   ├── books.py
+│   │   ├── outlines.py
+│   │   ├── characters.py
+│   │   ├── chapters.py
+│   │   ├── review.py
+│   │   ├── analysis.py
+│   │   └── timeline.py
+│   ├── services/
+│   │   ├── ai/                  # AI 调用（直连 API，无 LangChain）
+│   │   │   ├── client.py        # HTTP 客户端封装
+│   │   │   ├── deepseek.py      # DeepSeek API 适配
+│   │   │   ├── kimi.py          # Kimi API 适配
+│   │   │   └── router.py        # 按场景选模型
+│   │   ├── context/
+│   │   │   └── assembler.py     # 上下文组装（三重注入）
+│   │   ├── generator/
+│   │   │   ├── chapter.py       # 章节生成
+│   │   │   ├── outline.py       # 大纲生成
+│   │   │   └── character.py     # 角色生成
+│   │   ├── control/             # 生成控制
+│   │   │   ├── word_count.py    # 字数控制
+│   │   │   ├── de_ai.py         # 去AI味
+│   │   │   └── dialogue.py      # 对话优化
+│   │   ├── review/
+│   │   │   ├── chapter_review.py    # 章节评分
+│   │   │   └── outline_review.py    # 大纲审查
+│   │   ├── analysis/
+│   │   │   ├── preprocessor.py
+│   │   │   └── structure.py
+│   │   └── timeline/
+│   │       ├── manager.py       # 时间线管理
+│   │       └── state_tracker.py # 角色状态追踪
+│   └── middleware/
+│       └── auth.py
+├── requirements.txt
+├── Dockerfile
+└── tests/
+```
+
+### 5.2 前端目录结构
+
+```
+client/
+├── src/
+│   ├── app/                     # Next.js App Router
+│   │   ├── layout.tsx
+│   │   ├── page.tsx             # 首页
+│   │   ├── login/page.tsx
+│   │   ├── register/page.tsx
+│   │   ├── dashboard/page.tsx   # 控制台
+│   │   └── book/[id]/
+│   │       ├── page.tsx         # 项目概览
+│   │       ├── outlines/page.tsx
+│   │       ├── characters/page.tsx
+│   │       ├── chapters/page.tsx
+│   │       ├── chapter/[chapterId]/page.tsx  # 写作页面
+│   │       └── analysis/page.tsx
+│   ├── components/
+│   │   ├── ui/                  # shadcn/ui 基础组件
+│   │   ├── editor/              # 章节编辑器
+│   │   ├── outline-tree/        # 大纲树
+│   │   ├── character-card/      # 角色卡片
+│   │   ├── review-score/        # 审查评分组件（可视化雷达图）
+│   │   └── timeline/            # 时间线
+│   ├── lib/
+│   │   ├── api/                 # API 客户端
+│   │   ├── stores/              # Zustand
+│   │   └── utils/
+│   └── types/                   # TypeScript 类型
+├── package.json
+├── next.config.js
+├── tailwind.config.js
+├── dockerfile
+└── tsconfig.json
+```
+
+---
+
+## 六、核心功能实现
+
+### 6.1 AI 调用 — 直连 API（替代 LangChain）
 
 ```python
+# server/app/services/ai/client.py
+import httpx
+import json
+from typing import AsyncGenerator
+
+class AIClient:
+    """AI 模型 HTTP 客户端 — 直连 API，无中间件"""
+
+    def __init__(self, api_key: str, base_url: str, model: str):
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+    async def chat(self, messages: list[dict], temperature: float = 0.7,
+                   max_tokens: int = 4096) -> str:
+        """非流式调用"""
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                f"{self.base_url}/v1/chat/completions",
+                headers=self.headers,
+                json={
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens
+                }
+            )
+            return resp.json()["choices"][0]["message"]["content"]
+
+    async def chat_stream(self, messages: list[dict], temperature: float = 0.7,
+                          max_tokens: int = 4096) -> AsyncGenerator[str, None]:
+        """流式调用（SSE）"""
+        async with httpx.AsyncClient(timeout=120) as client:
+            async with client.stream(
+                "POST", f"{self.base_url}/v1/chat/completions",
+                headers=self.headers,
+                json={
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "stream": True
+                }
+            ) as response:
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data = line[6:]
+                        if data != "[DONE]":
+                            chunk = json.loads(data)
+                            delta = chunk["choices"][0]["delta"]
+                            if "content" in delta:
+                                yield delta["content"]
+
+# DeepSeek 适配（兼容 OpenAI 协议）
+class DeepSeekClient(AIClient):
+    def __init__(self, api_key: str):
+        super().__init__(api_key, "https://api.deepseek.com", "deepseek-chat")
+
+# Kimi 适配
+class KimiClient(AIClient):
+    def __init__(self, api_key: str):
+        super().__init__(api_key, "https://api.moonshot.cn", "moonshot-v1-8k")
+
+# 模型路由
+class ModelRouter:
+    """按场景选择模型"""
+    RULES = {
+        "chapter_generate": "deepseek",     # 正文写作 → DeepSeek
+        "chapter_review": "kimi",           # 审查评分 → Kimi（长文）
+        "outline_generate": "deepseek",     # 大纲生成 → DeepSeek
+        "analysis": "kimi",                 # 拆书分析 → Kimi（长文）
+        "de_ai": "deepseek",               # 去AI味 → DeepSeek
+        "dialogue_optimize": "deepseek",    # 对话优化 → DeepSeek
+    }
+
+    def __init__(self, config):
+        self.clients = {
+            "deepseek": DeepSeekClient(config.DEEPSEEK_API_KEY),
+            "kimi": KimiClient(config.KIMI_API_KEY),
+        }
+
+    def get_client(self, scene: str) -> AIClient:
+        model = self.RULES.get(scene, "deepseek")
+        return self.clients[model]
+```
+
+### 6.2 字数控制
+
+```python
+# server/app/services/control/word_count.py
+
 class WordBudgetAllocator:
-    """将章节目标字数按场景分配"""
+    """字数预算分配"""
 
-    def allocate(self, chapter_outline: str, total_target: int) -> list[SceneBudget]:
-        """根据大纲内容智能分配字数预算"""
-        scenes = self._extract_scenes(chapter_outline)
-        total_weight = sum(self._estimate_importance(s) for s in scenes)
-
-        budgets = []
-        remaining = total_target
-        for i, scene in enumerate(scenes):
-            if i == len(scenes) - 1:
-                # 最后一个场景取剩余
-                budgets.append(SceneBudget(scene=scene, target=remaining))
-            else:
-                weight = self._estimate_importance(scene)
-                target = int(total_target * weight / total_weight)
-                budgets.append(SceneBudget(scene=scene, target=target))
-                remaining -= target
-
-        return budgets
-
-    def _estimate_importance(self, scene: str) -> float:
-        """评估场景重要性"""
-        keywords_weight = {
+    def allocate(self, scenes: list[str], total_target: int) -> list[dict]:
+        importance_map = {
             "战斗": 1.5, "冲突": 1.5, "对决": 1.5,
             "对话": 1.0, "谈判": 1.0, "商议": 1.0,
             "描写": 0.6, "过渡": 0.5, "回忆": 0.5
         }
-        for kw, weight in keywords_weight.items():
-            if kw in scene:
-                return weight
-        return 1.0
-```
+        weights = []
+        for scene in scenes:
+            w = 1.0
+            for kw, weight in importance_map.items():
+                if kw in scene:
+                    w = weight
+                    break
+            weights.append(w)
 
-#### 实时字数控制器
+        total_w = sum(weights)
+        budgets = []
+        remaining = total_target
+        for i, scene in enumerate(scenes):
+            if i == len(scenes) - 1:
+                budgets.append({"scene": scene, "target": remaining})
+            else:
+                target = int(total_target * weights[i] / total_w)
+                remaining -= target
+                budgets.append({"scene": scene, "target": target})
+        return budgets
 
-```python
+
 class WordCountController:
-    """流式生成过程中的实时字数控制"""
+    """流式字数控制"""
 
     def __init__(self, target: int, tolerance: float = 0.1):
         self.target = target
         self.min_words = int(target * (1 - tolerance))
         self.max_words = int(target * (1 + tolerance))
-        self.current_words = 0
-        self.phase = "normal"  # normal / winding_down / capped
+        self.current = 0
 
-    def update(self, new_text: str) -> dict:
-        """更新字数统计并返回控制指令"""
-        self.current_words += len(new_text)
+    def update(self, text_chunk: str) -> dict:
+        self.current += len(text_chunk)
 
-        if self.current_words >= self.max_words:
-            self.phase = "capped"
+        if self.current >= self.max_words:
             return {"action": "stop", "reason": "超出上限"}
 
-        if self.current_words >= self.target * 0.9:
-            self.phase = "winding_down"
-            return {
-                "action": "inject_prompt",
-                "prompt": "本章即将结束，请自然收尾。不要开启新的情节线索。"
-            }
+        if self.current >= self.target * 0.9:
+            return {"action": "inject",
+                    "prompt": "本章即将结束，请自然收尾，不要开启新线索。"}
 
         return {"action": "continue"}
 ```
 
-#### 扩写/压缩 Pass
+### 6.3 去AI味
 
 ```python
-class TextExpander:
-    """字数不足时扩写"""
+# server/app/services/control/de_ai.py
 
-    async def expand(self, text: str, target_words: int) -> str:
-        current = len(text)
-        if current >= target_words:
-            return text
+AI_FLAVOR_WORDS = [
+    "然而", "但是", "不过", "值得一提的是",
+    "显而易见", "毫无疑问", "事实上", "换句话说",
+    "简而言之", "不可否认", "值得注意的是"
+]
 
-        prompt = f"""
-        请将以下段落从{current}字扩展到{target_words}字（增加约{target_words - current}字）。
-        扩展方向：
-        1. 增加角色之间的对话互动
-        2. 补充环境细节和氛围描写
-        3. 丰富角色的动作和表情描写
-        4. 保持原有风格和节奏，不要引入新的情节。
-        """
-        return await ai_service.generate(prompt, text)
+PSYCH_PATTERNS = [
+    "他感到", "她感到", "他心里想", "她心里想",
+    "他意识到", "她意识到"
+]
 
 
-class TextCompressor:
-    """字数超出时压缩"""
+def score_flavor(text: str) -> dict:
+    """语感评分 0-100"""
+    score = 100
 
-    async def compress(self, text: str, target_words: int) -> str:
-        current = len(text)
-        if current <= target_words:
-            return text
+    # AI词检测（每500字超过2个扣分）
+    word_count = 0
+    for word in AI_FLAVOR_WORDS:
+        n = text.count(word)
+        if n > 0:
+            word_count += n
+    expected_max = max(len(text) / 500 * 2, 1)
+    if word_count > expected_max:
+        score -= int((word_count - expected_max) * 10)
 
-        prompt = f"""
-        请将以下段落从{current}字压缩到{target_words}字（删减约{current - target_words}字）。
-        压缩方向：
-        1. 精简修饰性形容词和副词
-        2. 合并重复或相似的描述
-        3. 缩短环境描写，保留核心情节
-        4. 保持故事逻辑完整，不删除关键对话和情节推进。
-        """
-        return await ai_service.generate(prompt, text)
-```
+    # 心理描写检测
+    psych_count = sum(text.count(p) for p in PSYCH_PATTERNS)
+    if psych_count > 5:
+        score -= min(psych_count * 5, 25)
 
----
-
-### 3.2 去AI味子系统
-
-```python
-class AIFlavorRemover:
-    """六层去AI味机制"""
-
-    AI_FLAVOR_WORDS = [
-        "然而", "但是", "不过", "值得一提的是",
-        "显而易见", "毫无疑问", "事实上", "换句话说",
-        "简而言之", "总的来说", "换言之", "不可否认",
-        "从某种程度上说", "在某种意义上", "值得注意的是"
-    ]
-
-    PSYCHOLOGICAL_PATTERNS = [
-        "他感到", "她感到", "他心里想", "她心里想",
-        "他意识到", "她意识到", "他觉得自己", "她觉得自己"
-    ]
-
-    async def remove(self, text: str, aggressiveness: str = "medium") -> DeAIResult:
-        """执行去AI味处理"""
-        # 第一遍：规则检测
-        stats = self._analyze_flavor(text)
-
-        # 第二遍：AI改写
-        processed = await self._ai_rewrite(text, aggressiveness, stats)
-
-        # 第三遍：验证评分
-        final_score = self._score(processed)
-
-        return DeAIResult(
-            original_text=text,
-            processed_text=processed,
-            changes=self._diff(text, processed),
-            flavor_score_before=stats.score,
-            flavor_score_after=final_score,
-            removed_ai_words=stats.ai_word_count
-        )
-
-    def _analyze_flavor(self, text: str) -> FlavorStats:
-        """分析AI味程度"""
-        stats = FlavorStats()
-
-        # 统计AI高频词
-        for word in self.AI_FLAVOR_WORDS:
-            count = text.count(word)
-            if count > 0:
-                stats.ai_words[word] = count
-                stats.ai_word_count += count
-
-        # 统计心理描写标签
-        for pattern in self.PSYCHOLOGICAL_PATTERNS:
-            count = text.count(pattern)
-            if count > 0:
-                stats.psych_patterns[pattern] = count
-
-        # 分析句子长度分布
-        sentences = self._split_sentences(text)
-        short_sentences = [s for s in sentences if len(s) <= 10]
-        stats.short_sentence_ratio = len(short_sentences) / max(len(sentences), 1)
-
-        # 分析对话占比
-        dialogue_chars = self._count_dialogue_chars(text)
-        stats.dialogue_ratio = dialogue_chars / max(len(text), 1)
-
-        return stats
-
-    def _score(self, text: str) -> int:
-        """语感评分"""
-        stats = self._analyze_flavor(text)
-        score = 100
-
-        # AI词扣分（每500字超过2个扣分）
-        expected_max = max(len(text) / 500 * 2, 1)
-        if stats.ai_word_count > expected_max:
-            score -= int((stats.ai_word_count - expected_max) * 10)
-
-        # 短句比例扣分
-        if stats.short_sentence_ratio < 0.3:
-            score -= 10
-        elif stats.short_sentence_ratio > 0.6:
-            score -= 5
-
-        # 对话占比扣分
-        if stats.dialogue_ratio < 0.35:
+    # 短句比例检测
+    sentences = [s.strip() for s in text.replace("！", "。")
+                 .replace("？", "。").replace("\n", "").split("。") if s.strip()]
+    if sentences:
+        short_ratio = sum(1 for s in sentences if len(s) <= 10) / len(sentences)
+        if short_ratio < 0.25:
             score -= 15
-        elif stats.dialogue_ratio > 0.7:
+        elif short_ratio > 0.6:
             score -= 5
 
-        # 心理描写扣分
-        if stats.psych_pattern_count > 5:
-            score -= min(stats.psych_pattern_count * 5, 20)
+    # 对话占比检测
+    in_dialogue = False
+    dialogue_chars = 0
+    for ch in text:
+        if ch in "「『""':
+            in_dialogue = True
+        elif ch in "」』""":
+            in_dialogue = False
+        elif in_dialogue:
+            dialogue_chars += 1
+    dialogue_ratio = dialogue_chars / max(len(text), 1)
+    if dialogue_ratio < 0.35:
+        score -= 15
+    elif dialogue_ratio > 0.7:
+        score -= 5
 
-        return max(score, 0)
-
-    async def _ai_rewrite(self, text: str, level: str, stats: FlavorStats) -> str:
-        """AI改写去AI味"""
-        prompt = f"""
-        请改写以下文本，去除AI写作痕迹，让语言更自然、更像人类网文作者写的。
-
-        当前文本存在的具体问题：
-        - AI高频词（{', '.join(stats.ai_words.keys())}）出现了{stats.ai_word_count}次
-        - 心理描写标签（{', '.join(stats.psych_patterns.keys())}）出现了{stats.psych_pattern_count}次
-        - 短句占比仅{stats.short_sentence_ratio:.0%}，需要更多短句
-        - 对话占比仅{stats.dialogue_ratio:.0%}，需要增加对话
-
-        改写要求：
-        1. 删除或替换{"所有" if level == "high" else "大部分"}AI高频词
-        2. 用动作和对话代替直接的心理描写
-        {"3. 大幅增加短句，让节奏更明快" if level == "high" else "3. 适当增加短句"}
-        4. 增加对话互动，让对话占比提升到40%以上
-        5. 保持原意和情节不变
-        """
-        return await ai_service.generate(prompt, text)
+    return {
+        "score": max(score, 0),
+        "ai_word_count": word_count,
+        "psych_count": psych_count,
+        "dialog_ratio": round(dialogue_ratio, 2)
+    }
 ```
 
----
-
-### 3.3 对话优化子系统
+### 6.4 审查评分
 
 ```python
-class DialogueOptimizer:
-    """四维对话优化系统"""
+# server/app/services/review/chapter_review.py
 
-    # 预设角色类型模板
-    SPEECH_TEMPLATES = {
-        "豪爽大侠": {
-            "formality": 0.3,
-            "avg_len": 6,
-            "tone_words": ["哈", "痛快", "兄弟"],
-            "favorite": ["老子", "干", "走"],
-            "forbidden": []
-        },
-        "文雅书生": {
-            "formality": 0.8,
-            "avg_len": 14,
-            "tone_words": ["矣", "乎", "哉"],
-            "favorite": ["确实", "不过", "依我之见"],
-            "forbidden": ["卧槽", "特么"]
-        },
-        "冷面高手": {
-            "formality": 0.5,
-            "avg_len": 4,
-            "tone_words": [],
-            "favorite": ["嗯", "走吧", "不必"],
-            "forbidden": []
-        },
-        "活泼少女": {
-            "formality": 0.2,
-            "avg_len": 7,
-            "tone_words": ["哎呀", "啦", "耶", "嘛"],
-            "favorite": ["真的吗", "好好玩", "好耶"],
-            "forbidden": []
-        }
+WEIGHTS = {
+    "剧情连贯性": 0.25,
+    "人设一致性": 0.20,
+    "爽点密度": 0.15,
+    "节奏控制": 0.15,
+    "对话质量": 0.10,
+    "去AI味语感": 0.10,
+    "时间线一致性": 0.05
+}
+
+REVIEW_THRESHOLDS = {
+    "auto_pass": 85,
+    "pass_with_suggestions": 70,
+    "suggest_rewrite": 60,
+    "force_rewrite": 0
+}
+
+
+async def review_chapter(chapter_id: str, db) -> dict:
+    """执行7维度审查评分"""
+    chapter = await db.get_chapter(chapter_id)
+    book = await db.get_book(chapter.book_id)
+
+    # 组装审查上下文
+    context = {
+        "chapter": chapter.content,
+        "chapter_title": chapter.title,
+        "outline": await db.get_outline(chapter.outline_id),
+        "previous_summaries": await db.get_chapter_summaries(
+            book.id, chapter.sort_order - 1, limit=3
+        ),
+        "characters": await db.get_characters_by_ids(chapter.characters),
+        "timeline_events": await db.get_timeline(book.id, limit=10)
     }
 
-    async def optimize(
-        self,
-        chapter_text: str,
-        character_speech_profiles: dict[str, SpeechProfile]
-    ) -> DialogueOptimizeResult:
-        """优化章节中的对话"""
-        dialogues = self._extract_dialogues(chapter_text)
+    # 调用 AI 逐项评分
+    prompt = _build_review_prompt(context)
+    result = await ai_client.chat([{"role": "user", "content": prompt}])
+    scores = parse_review_result(result)
 
-        changes = []
-        total_before = 0
-        total_after = 0
+    # 计算总分
+    overall = sum(scores[d]["score"] * WEIGHTS[d] for d in WEIGHTS)
 
-        for dialogue in dialogues:
-            speaker = dialogue["speaker"]
-            profile = character_speech_profiles.get(speaker)
+    # 判定
+    if overall >= 85:
+        passed, rewrite = True, False
+    elif overall >= 70:
+        passed, rewrite = True, False
+    elif overall >= 60:
+        passed, rewrite = False, True
+    else:
+        passed, rewrite = False, True
 
-            if profile:
-                # 检查当前对话是否符合角色特征
-                score = self._score_dialogue(dialogue["text"], profile)
-                total_before += score
+    # 提取优先级问题
+    priority = []
+    for dim, data in scores.items():
+        for issue in data.get("issues", []):
+            if issue.get("severity") in ("high", "medium"):
+                priority.append({
+                    "dimension": dim,
+                    "content": issue["content"],
+                    "severity": issue["severity"]
+                })
 
-                if score < 70:
-                    # 不符合则优化
-                    optimized = await self._rewrite_dialogue(
-                        dialogue["text"], speaker, profile
-                    )
-                    chapter_text = chapter_text.replace(
-                        dialogue["text"], optimized
-                    )
-                    changes.append({
-                        "speaker": speaker,
-                        "from": dialogue["text"],
-                        "to": optimized,
-                        "reason": self._get_failure_reason(dialogue["text"], profile)
-                    })
+    # 保存审查记录
+    review_id = await db.save_review({
+        "book_id": book.id,
+        "target_type": "chapter",
+        "target_id": chapter_id,
+        "overall_score": int(overall),
+        "passed": passed,
+        "rewrite_required": rewrite,
+        "dimension_scores": scores,
+        "priority_issues": priority
+    })
 
-                    new_score = self._score_dialogue(optimized, profile)
-                    total_after += new_score
-                else:
-                    total_after += score
-
-        return DialogueOptimizeResult(
-            original_text=chapter_text,
-            optimized_text=chapter_text,
-            changes=changes,
-            before_score=total_before / max(len(dialogues), 1),
-            after_score=total_after / max(len(dialogues), 1)
-        )
-
-    def _score_dialogue(self, text: str, profile: SpeechProfile) -> int:
-        """单句对话评分"""
-        score = 100
-
-        # 检查禁用词
-        for word in profile.forbidden_words:
-            if word in text:
-                score -= 20
-
-        # 检查爱用词
-        has_favorite = any(w in text for w in profile.favorite_words)
-        if not has_favorite:
-            score -= 10
-
-        # 检查句子长度
-        sentence_len = len(text)
-        if abs(sentence_len - profile.avg_sentence_length) > 5:
-            score -= 15
-
-        # 检查正式度
-        # 0.3以下：应含语气词
-        if profile.formality_level < 0.4:
-            has_tone = any(w in text for w in profile.tone_words)
-            if not has_tone:
-                score -= 15
-
-        return max(score, 0)
+    return {
+        "review_id": review_id,
+        "overall_score": int(overall),
+        "passed": passed,
+        "rewrite_required": rewrite,
+        "dimensions": scores,
+        "priority_issues": priority
+    }
 ```
 
 ---
 
-### 3.4 时间线与角色状态追踪
+## 七、Docker 部署
 
-```python
-class TimelineManager:
-    """全局时间线管理"""
-
-    async def pre_generation_check(
-        self,
-        book_id: UUID,
-        chapter_outline: str,
-        mentioned_characters: list[str]
-    ) -> PreGenCheckResult:
-        """生成前的时间线和角色状态检查"""
-        warnings = []
-
-        # 1. 获取当前时间线状态
-        last_event = await self.get_last_event(book_id)
-        current_day = last_event.day_number if last_event else 1
-
-        # 2. 检查时间连续性
-        time_hint = self._extract_time_hint(chapter_outline)
-        if time_hint and time_hint < current_day:
-            warnings.append(Warning(
-                severity="high",
-                content=f"新章节时间({time_hint}d)早于当前时间({current_day}d)"
-            ))
-
-        # 3. 检查角色状态
-        char_states = {}
-        for char_name in mentioned_characters:
-            char = await character_service.get_by_name(book_id, char_name)
-            if char:
-                last_state = await self.get_latest_state(char.id)
-                char_states[char_name] = last_state
-
-                # 检查位置连续性
-                if last_state and "location" in last_state:
-                    if last_state["location"] not in chapter_outline:
-                        # 检查是否有行程交代
-                        if not self._has_travel_narrative(chapter_outline, char_name):
-                            warnings.append(Warning(
-                                severity="medium",
-                                content=f"{char_name}上一章在"
-                                        f"{last_state['location']}，新章未交代移动"
-                            ))
-
-        return PreGenCheckResult(
-            passed=len([w for w in warnings if w.severity == "high"]) == 0,
-            warnings=warnings,
-            timeline_context={
-                "current_day": current_day,
-                "season": self._calculate_season(current_day),
-                "last_event": last_event.event_desc if last_event else "故事开始",
-                "character_states": char_states
-            }
-        )
-
-    async def record_chapter_events(
-        self,
-        chapter_id: UUID,
-        events: list[ChapterEvent]
-    ):
-        """生成后记录章节事件"""
-        chapter = await chapter_service.get(chapter_id)
-        book_id = chapter.book_id
-
-        for event in events:
-            await TimelineEvent.create(
-                book_id=book_id,
-                chapter_id=chapter_id,
-                day_number=event.day,
-                event_desc=event.desc,
-                involved_chars=event.characters,
-                location=event.location,
-                importance=event.importance
-            )
-
-    async def update_character_states(
-        self,
-        chapter_id: UUID,
-        character_updates: dict[str, CharacterStateUpdate]
-    ):
-        """更新角色状态"""
-        chapter = await chapter_service.get(chapter_id)
-
-        for char_name, update in character_updates.items():
-            char = await character_service.get_by_name(chapter.book_id, char_name)
-            if char:
-                latest_state = await self.get_latest_state(char.id)
-
-                # 合并状态
-                new_state = latest_state or {}
-                new_state.update(update.dict(exclude_none=True))
-
-                await CharStateLog.create(
-                    character_id=char.id,
-                    chapter_id=chapter_id,
-                    chapter_number=chapter.sort_order,
-                    state_snapshot=new_state
-                )
-```
-
----
-
-## 四、上下文引擎设计
-
-### 4.1 三重上下文注入流程
-
-```
-用户请求生成第 N 章
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│  上下文组装器 (Context Assembler)                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  第1层：近5章摘要 (来自 chapters.ai_summary)                   │
-│  ───────────────────────────────────────────────────────────  │
-│  从第 N-5 章到第 N-1 章，每章取 100 字摘要                    │
-│                                                             │
-│  第2层：当前大纲节点 (来自 outlines)                           │
-│  ───────────────────────────────────────────────────────────  │
-│  获取当前章节的 outline 节点 + 所属卷的大纲节点                │
-│                                                             │
-│  第3层：角色设定 (来自 characters)                             │
-│  ───────────────────────────────────────────────────────────  │
-│  获取出场角色卡片，每个角色压缩到 200 字以内                   │
-│                                                             │
-│  附加：时间线信息 (来自 timeline_events)                       │
-│  ───────────────────────────────────────────────────────────  │
-│  当前故事时间：第15天 / 初夏                                   │
-│                                                             │
-│  附加：字数预算 (来自 WordBudgetAllocator)                     │
-│  ───────────────────────────────────────────────────────────  │
-│  目标3000字，当前场景字数分配表                                │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│  提示词组装器 (Prompt Builder)                                │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  System Prompt =                                              │
-│    "你是一位专业的网文作者，擅长写【题材】类小说。"             │
-│    + "当前作品：《书名》，风格：【风格】"                      │
-│    + "=== 近期剧情摘要 ==="                                   │
-│    + {第1层内容}                                              │
-│    + "=== 本章目标 ==="                                       │
-│    + {第2层内容}                                              │
-│    + "=== 出场角色 ==="                                       │
-│    + {第3层内容}                                              │
-│    + "=== 字数要求 ==="                                       │
-│    + "本章目标字数{target}字，当前场景约{budget}字"           │
-│    + "=== 写作要求 ==="                                       │
-│    + style_instructions                                       │
-│    + de_ai_instructions                                       │
-│    + dialogue_instructions                                    │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-    调用大模型生成正文（字数控制实时介入）
-```
-
-### 4.2 Prompt 模板集
-
-#### 去AI味写作指令模板
-
-```
-=== 写作风格要求 ===
-
-【禁止使用的表达】
-❌ AI高频词：然而、但是、不过、值得一提的是、显而易见、毫无疑问、事实上
-❌ 心理描写标签：他感到、她意识到、他心里想、他觉得自己
-❌ 每段结尾的总结性句子
-❌ 工整的排比句
-❌ "就这样"、"如此一来" 等过渡词
-
-【必须遵循的要求】
-✅ 用动作和对话表现情绪
-   ❌ "他感到非常愤怒"
-   ✅ "他一拳砸在桌上，茶杯跳了起来"
-✅ 句子长短结合，至少30%的句子在10字以内
-✅ 对话占比不低于40%
-✅ 段落短小，每段不超过200字
-✅ 适当使用口语化表达
-✅ 不同角色说话要有明显区别
-```
-
-#### 对话写作指令模板
-
-```
-=== 角色对话要求 ===
-
-【角色语音特征】
-{角色名}（{角色类型}）：
-  - 说话特点：{speech_profile.speech_pattern}
-  - 常用语气词：{speech_profile.tone_words}
-  - 爱用词：{speech_profile.favorite_words}
-  - 禁用词：{speech_profile.forbidden_words}
-  - 句子长度偏好：约{speech_profile.avg_sentence_length}字
-  - 正式度：{speech_profile.formality_level}
-
-【当前对话场景】
-场景类型：{scene_type}
-正式度要求：{formality_adjustment}
-注意事项：{scene_notes}
-
-请确保每个角色的对话方式符合其语音特征，
-不同角色之间要有明显的语言风格差异。
-```
-
-#### 字数控制指令模板
-
-```
-=== 字数要求 ===
-
-本章目标总字数：{target}字
-允许误差：±10%（即{min_words}-{max_words}字）
-
-当前场景：{scene_name}
-本场景目标字数：{scene_budget}字
-
-请严格按照字数要求写作。
-当字数接近目标时会收到"收尾提示"，请配合执行。
-```
-
----
-
-## 五、拆书引擎设计
-
-### 5.1 拆书分析流水线
-
-```
-用户上传/粘贴小说内容
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│  文本预处理                                                    │
-│  ├── 自动分章（根据"第X章"、空行、数字编号）                   │
-│  ├── 每章生成 100 字摘要                                      │
-│  └── 提取章节标题和基本信息                                   │
-└─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│  结构分析 (调用大模型)                                         │
-│  ├── 整体故事弧线识别（起承转合/三幕剧）                      │
-│  ├── 章节节奏标注（铺垫/冲突/高潮/过渡）                      │
-│  ├── 爽点类型和位置识别                                      │
-│  └── 开篇分析（黄金三章）                                    │
-└─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│  角色分析 (调用大模型)                                         │
-│  ├── 提取所有有名字的角色                                    │
-│  ├── 标注角色类型（主角/配角/反派/龙套）                     │
-│  ├── 分析性格特点/动机/成长弧                               │
-│  └── 建立角色关系网                                          │
-└─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│  写作技巧提取 (调用大模型)                                     │
-│  ├── 叙事手法识别（视角/时间线/伏笔）                        │
-│  ├── 对话风格分析                                            │
-│  ├── 描写特点提取                                            │
-│  └── 节奏控制技巧总结                                        │
-└─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────────────┐
-│  模板生成                                                     │
-│  ├── 生成可复用的大纲模板（占位替换）                        │
-│  ├── 生成角色模板                                            │
-│  └── 生成节奏模板                                            │
-└─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-    输出结构化拆书报告
-```
-
----
-
-## 六、目录结构
-
-```
-ai-novel-platform/
-├── client/                          # 前端 (Next.js 16)
-│   ├── src/
-│   │   ├── app/                     # Next.js App Router
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   ├── login/
-│   │   │   ├── register/
-│   │   │   ├── dashboard/
-│   │   │   ├── books/
-│   │   │   └── book/[id]/
-│   │   │       ├── page.tsx
-│   │   │       ├── outlines/
-│   │   │       ├── characters/
-│   │   │       ├── chapters/
-│   │   │       ├── chapter/[chapterId]/
-│   │   │       └── analysis/
-│   │   ├── components/
-│   │   │   ├── ui/                  # shadcn/ui 组件
-│   │   │   ├── layout/
-│   │   │   ├── editor/              # 章节编辑器
-│   │   │   ├── outline-tree/        # 大纲树组件
-│   │   │   ├── character-card/      # 角色卡片
-│   │   │   ├── analysis-report/     # 拆书报告
-│   │   │   ├── review-score/        # 审查评分组件
-│   │   │   ├── speech-profile/      # 语音特征配置
-│   │   │   └── timeline/            # 时间线可视化
-│   │   ├── lib/
-│   │   │   ├── api/                 # API 客户端
-│   │   │   ├── stores/              # Zustand 状态
-│   │   │   └── utils/
-│   │   └── types/
-│   ├── package.json
-│   ├── next.config.js
-│   ├── tailwind.config.js
-│   └── tsconfig.json
-│
-├── server/                          # 后端 (Python FastAPI)
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── config.py
-│   │   ├── database.py
-│   │   ├── models/
-│   │   │   ├── book.py
-│   │   │   ├── outline.py
-│   │   │   ├── character.py
-│   │   │   ├── chapter.py
-│   │   │   ├── analysis.py
-│   │   │   ├── review.py
-│   │   │   ├── timeline.py
-│   │   │   └── speech_profile.py
-│   │   ├── schemas/
-│   │   │   ├── book.py
-│   │   │   ├── outline.py
-│   │   │   ├── character.py
-│   │   │   ├── chapter.py
-│   │   │   ├── review.py
-│   │   │   └── timeline.py
-│   │   ├── api/
-│   │   │   ├── auth.py
-│   │   │   ├── books.py
-│   │   │   ├── outlines.py
-│   │   │   ├── characters.py
-│   │   │   ├── chapters.py
-│   │   │   ├── review.py
-│   │   │   ├── analysis.py
-│   │   │   └── timeline.py
-│   │   └── services/
-│   │       ├── ai/
-│   │       │   ├── base.py
-│   │       │   ├── deepseek.py
-│   │       │   ├── kimi.py
-│   │       │   ├── router.py
-│   │       │   └── stream.py
-│   │       ├── context/
-│   │       │   ├── assembler.py
-│   │       │   ├── summarizer.py
-│   │       │   └── rag.py
-│   │       ├── generator/
-│   │       │   ├── chapter_gen.py
-│   │       │   ├── outline_gen.py
-│   │       │   └── character_gen.py
-│   │       ├── control/
-│   │       │   ├── word_count.py       # 字数控制
-│   │       │   ├── de_ai.py            # 去AI味
-│   │       │   └── dialogue.py         # 对话优化
-│   │       ├── review/
-│   │       │   ├── chapter_review.py   # 章节审查评分
-│   │       │   └── outline_review.py   # 大纲审查
-│   │       ├── analysis/
-│   │       │   ├── preprocessor.py
-│   │       │   ├── structure.py
-│   │       │   └── template_gen.py
-│   │       └── timeline/
-│   │           ├── timeline_manager.py # 时间线管理
-│   │           └── state_tracker.py    # 角色状态追踪
-│   ├── tests/
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── alembic/
-│
-├── docker-compose.yml
-├── .env.example
-└── README.md
-```
-
----
-
-## 七、部署方案
+### 7.1 docker-compose.yml
 
 ```yaml
 version: '3.8'
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    container_name: ai-novel-db
     environment:
       POSTGRES_DB: ai_novel
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ai_novel
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_novel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./server
+    container_name: ai-novel-backend
     environment:
-      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/ai_novel
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://ai_novel:${DB_PASSWORD:-changeme}@postgres:5432/ai_novel
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       KIMI_API_KEY: ${KIMI_API_KEY}
-      TONGYI_API_KEY: ${TONGYI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
+    restart: unless-stopped
 
   frontend:
     build: ./client
+    container_name: ai-novel-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     depends_on:
       - backend
     ports:
       - "3000:3000"
+    restart: unless-stopped
 
 volumes:
   postgres_data:
 ```
+
+### 7.2 启动命令
+
+```bash
+# 1. 克隆项目
+git clone <repo> && cd ai-novel-platform
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 填入 DEEPSEEK_API_KEY、KIMI_API_KEY
+
+# 3. 一键启动（3个容器）
+docker compose up -d
+
+# 4. 查看运行状态
+docker compose ps
+
+# 5. 访问
+# 前端: http://localhost:3000
+# 后端: http://localhost:8000
+# API 文档: http://localhost:8000/docs
+
+# 6. 停止
+docker compose down
+
+# 7. 查看日志
+docker compose logs -f
+```
+
+### 7.3 Dockerfile 文件
+
+```dockerfile
+# server/Dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# FastAPI 自动建表 + 启动
+CMD ["sh", "-c", "python -c 'from app.database import init_db; import asyncio; asyncio.run(init_db())' && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+```
+
+```dockerfile
+# client/Dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS run
+WORKDIR /app
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/package.json ./
+RUN npm ci --only=production
+CMD ["npm", "run", "start"]
+```
+
+---
+
+## 八、项目依赖清单
+
+### 8.1 后端依赖 (requirements.txt)
+
+```
+fastapi==0.115.*
+uvicorn[standard]==0.30.*
+sqlalchemy[asyncio]==2.0.*
+asyncpg==0.29.*
+httpx==0.27.*
+python-jose[cryptography]==3.3.*
+passlib[bcrypt]==1.7.*
+python-dotenv==1.0.*
+pydantic==2.*
+```
+
+**仅 8 个依赖**，相比 LangChain 方案减少约 50+ 个间接依赖。
+
+### 8.2 前端依赖 (package.json)
+
+```json
+{
+  "dependencies": {
+    "next": "^16",
+    "react": "^19",
+    "react-dom": "^19",
+    "@tiptap/react": "^2",
+    "@tiptap/starter-kit": "^2",
+    "@tiptap/extension-placeholder": "^2",
+    "react-arborist": "^3",
+    "zustand": "^5",
+    "lucide-react": "^0",
+    "tailwindcss": "^4",
+    "class-variance-authority": "^0"
+  }
+}
+```
+
+### 8.3 网络依赖（作者需自行申请 API Key）
+
+| API | 用途 | 是否需要 |
+|-----|------|---------|
+| DeepSeek API Key | 正文写作/大纲生成/对话优化/去AI味 | **必需** |
+| Kimi API Key | 章节审查/拆书分析（长文） | 可选，缺省用 DeepSeek |
+
+---
+
+## 九、开发计划
+
+### 第1步：项目骨架
+- `docker-compose.yml` + 后端 Dockerfile + 前端 Dockerfile
+- `server/app/main.py` + `server/app/database.py` + `server/app/models/*.py`
+- `client/` Next.js 项目初始化
+
+### 第2步：后端核心
+- AI 客户端 (`services/ai/client.py`)
+- 用户认证 (`api/auth.py`)
+- 项目管理 CRUD (`api/books.py`)
+- 大纲管理 CRUD (`api/outlines.py`)
+- 角色管理 CRUD (`api/characters.py`)
+
+### 第3步：前端基础
+- 布局 + 认证页面
+- 控制台 / 项目管理
+- 大纲树组件
+- 角色卡片组件
+- 章节编辑器
+
+### 第4步：AI 生成功能
+- 章节正文生成 (SSE 流式)
+- 字数控制
+- 上下文注入
+- 大纲 AI 生成
+- 角色 AI 生成
+
+### 第5步：质量优化
+- 去AI味 + 语感评分
+- 对话优化
+- 审查评分系统
+- 时间线 / 角色状态
+
+### 第6步：拆书分析
+- 上传/粘贴作品
+- 结构/角色/节奏分析
+- 模板生成
