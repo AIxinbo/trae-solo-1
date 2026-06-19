@@ -82,16 +82,14 @@ pydantic==2.*
 # Database
 DB_PASSWORD=changeme
 
-# AI API Keys（必填）
-DEEPSEEK_API_KEY=sk-your-deepseek-api-key
-KIMI_API_KEY=sk-your-kimi-api-key
-
 # JWT
 JWT_SECRET=your-jwt-secret-change-in-production
 
 # Frontend
 NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 ```
+
+**说明**：不再需要在环境变量中配置 AI API Key。用户模型的 API Key 通过前端页面配置，存储在数据库中（`user_model_configs` 表），支持用户运行时动态切换和添加第三方模型。
 
 ---
 
@@ -123,7 +121,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │   ├── character.py
 │       │   ├── chapter.py
 │       │   ├── review.py
-│       │   └── timeline.py
+│       │   ├── timeline.py
+│       │   └── model_config.py      # 用户模型配置表
 │       ├── schemas/                # Pydantic 请求/响应
 │       │   ├── __init__.py
 │       │   ├── user.py
@@ -142,32 +141,37 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │   ├── chapters.py
 │       │   ├── review.py
 │       │   ├── analysis.py
-│       │   └── timeline.py
+│       │   ├── timeline.py
+│       │   └── model_config.py      # 模型配置API
 │       ├── services/
 │       │   ├── __init__.py
 │       │   ├── ai/
 │       │   │   ├── __init__.py
-│       │   │   ├── client.py       # AIClient 基类 + HTTP 封装
-│       │   │   ├── deepseek.py     # DeepSeek 适配
-│       │   │   ├── kimi.py         # Kimi 适配
-│       │   │   └── router.py       # ModelRouter
+│       │   │   ├── client.py       # AIClient 基类（支持动态模型）
+│       │   │   ├── factory.py      # 模型工厂：根据用户配置创建客户端实例
+│       │   │   └── router.py       # ModelRouter（废弃，由factory替代）
 │       │   ├── context/
 │       │   │   ├── __init__.py
 │       │   │   └── assembler.py    # 三重上下文组装
 │       │   ├── generator/
 │       │   │   ├── __init__.py
-│       │   │   ├── chapter.py      # 章节正文生成
-│       │   │   ├── outline.py      # 大纲生成
-│       │   │   └── character.py    # 角色生成
+│       │   │   ├── chapter.py      # 章节正文生成（多智能体入口）
+│       │   │   ├── planner.py      # Agent 1：情节规划Agent
+│       │   │   ├── writer.py       # Agent 2：正文写手Agent
+│       │   │   ├── de_ai.py        # Agent 3：去AI味Agent
+│       │   │   └── proofreader.py  # Agent 4：审校Agent
 │       │   ├── control/
 │       │   │   ├── __init__.py
 │       │   │   ├── word_count.py   # 字数控制
-│       │   │   ├── de_ai.py        # 去AI味 + 语感评分
 │       │   │   └── dialogue.py     # 对话优化
 │       │   ├── review/
 │       │   │   ├── __init__.py
-│       │   │   ├── chapter_review.py   # 章节7维评分
-│       │   │   └── outline_review.py   # 大纲审查
+│       │   │   ├── coherence_agent.py   # Agent 1：连贯性审查Agent
+│       │   │   ├── character_agent.py   # Agent 2：人设审查Agent
+│       │   │   ├── pleasure_agent.py    # Agent 3：爽点+节奏审查Agent
+│       │   │   ├── aggregator.py        # Agent 4：综合评分Agent + 判定
+│       │   │   ├── chapter_review.py    # 章节审查入口（编排4个Agent）
+│       │   │   └── outline_review.py    # 大纲审查
 │       │   ├── analysis/
 │       │   │   ├── __init__.py
 │       │   │   └── core.py         # 拆书分析核心
@@ -213,8 +217,11 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │           │       └── page.tsx   # 写作编辑器页
 │       │           ├── analysis/
 │       │           │   └── page.tsx
-│       │           └── timeline/
-│       │               └── page.tsx
+│       │   ├── timeline/
+│       │   │   └── page.tsx
+│       │   └── settings/
+│       │       └── models/
+│       │           └── page.tsx    # 模型配置页
 │       ├── components/
 │       │   ├── ui/                 # 通用UI组件
 │       │   │   ├── button.tsx
@@ -542,6 +549,7 @@ async def init_db():
         from app.models.review import Review
         from app.models.timeline import TimelineEvent, CharStateLog
         from app.models.analysis import AnalysisRecord
+        from app.models.model_config import UserModelConfig
         await conn.run_sync(Base.metadata.create_all)
 ```
 
@@ -877,7 +885,7 @@ class AnalysisRecord(Base):
 ```python
 # server/app/api/router.py
 from fastapi import APIRouter
-from app.api import auth, books, outlines, characters, chapters, review, analysis, timeline
+from app.api import auth, books, outlines, characters, chapters, review, analysis, timeline, model_config
 
 api_router = APIRouter()
 
@@ -889,6 +897,7 @@ api_router.include_router(chapters.router, prefix="/books", tags=["章节管理"
 api_router.include_router(review.router, prefix="/review", tags=["审查评分"])
 api_router.include_router(analysis.router, prefix="/analysis", tags=["拆书分析"])
 api_router.include_router(timeline.router, prefix="/books", tags=["时间线"])
+api_router.include_router(model_config.router, prefix="/model-configs", tags=["模型配置"])
 ```
 
 ### 3.8 Pydantic Schema 示例
@@ -1019,7 +1028,56 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Invalid token")
 ```
 
-### 4.2 AI 客户端（直连 API）
+### 4.2 AI 客户端 + 模型配置（支持用户自定义模型）
+
+**核心变化**：用户可以在前端自由配置第三方模型（DeepSeek、Kimi、通义千问、OpenAI 等），系统根据配置动态创建客户端实例，不再硬编码。
+
+#### 数据模型：模型配置表
+
+```python
+# server/app/models/model_config.py
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, Integer, DateTime, JSON, ForeignKey, Boolean
+from sqlalchemy.dialects.postgresql import UUID
+from app.database import Base
+
+
+class UserModelConfig(Base):
+    """用户自定义第三方模型配置"""
+    __tablename__ = "user_model_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    provider = Column(String(50), default="openai-compatible")
+    base_url = Column(String(500), nullable=False)
+    api_key = Column(String(500), nullable=False)
+    model_name = Column(String(100), nullable=False)
+    scenes = Column(JSON, default=list)
+    is_active = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+```
+
+**场景标识符**：
+
+| 场景 | 用途 | 所属模块 |
+|------|------|---------|
+| `chapter_planner` | 写作 — 情节规划Agent | 写正文多智能体 |
+| `chapter_writer` | 写作 — 正文写手Agent | 写正文多智能体 |
+| `de_ai` | 写作 — 去AI味Agent | 写正文多智能体 |
+| `proofreader` | 写作 — 审校Agent | 写正文多智能体 |
+| `chapter_review` | 审查 — 审查Agent（所有审查共用） | 审查多智能体 |
+| `outline_generate` | AI 生成大纲 | 大纲管理 |
+| `outline_review` | AI 审查大纲 | 大纲管理 |
+| `analysis` | 拆书分析 | 拆书分析 |
+| `dialogue` | 对话优化 | 对话优化 |
+
+用户可为每个场景指派不同模型。
+
+#### AIClient 基类
 
 ```python
 # server/app/services/ai/client.py
@@ -1029,12 +1087,12 @@ from typing import AsyncGenerator
 
 
 class AIClient:
-    """AI 模型 HTTP 客户端 — 直连 API"""
+    """AI 模型 HTTP 客户端 — 兼容 OpenAI 协议，不绑定具体模型"""
 
-    def __init__(self, api_key: str, base_url: str, model: str):
-        self.api_key = api_key
+    def __init__(self, base_url: str, api_key: str, model_name: str):
         self.base_url = base_url.rstrip("/")
-        self.model = model
+        self.api_key = api_key
+        self.model_name = model_name
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -1095,67 +1153,211 @@ class AIClient:
 ```
 
 ```python
-# server/app/services/ai/deepseek.py
+# server/app/services/ai/factory.py
+from typing import Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.services.ai.client import AIClient
+from app.models.model_config import UserModelConfig
+from app.models.book import Book
 from app.config import settings
 
 
-class DeepSeekClient(AIClient):
-    def __init__(self):
-        super().__init__(
-            settings.DEEPSEEK_API_KEY,
-            "https://api.deepseek.com",
-            "deepseek-chat"
-        )
+async def get_client_for_scene(
+    db: AsyncSession,
+    user_id: str,
+    scene: str,
+    book_id: Optional[str] = None,
+) -> AIClient:
+    """
+    根据用户配置，为指定场景获取 AI 客户端。
+    优先级：book.ai_config 覆盖 > 用户全局配置 > 默认 DeepSeek 兜底
+    """
+    # 1. 书籍级覆盖
+    if book_id:
+        result = await db.execute(select(Book).where(Book.id == book_id))
+        book = result.scalar_one_or_none()
+        if book and book.ai_config and "model_overrides" in book.ai_config:
+            overrides = book.ai_config["model_overrides"]
+            if scene in overrides:
+                cfg = overrides[scene]
+                if all(k in cfg for k in ("base_url", "api_key", "model_name")):
+                    return AIClient(cfg["base_url"], cfg["api_key"], cfg["model_name"])
+
+    # 2. 用户全局配置
+    result = await db.execute(
+        select(UserModelConfig)
+        .where(UserModelConfig.user_id == user_id, UserModelConfig.is_active == True)
+        .order_by(UserModelConfig.sort_order)
+    )
+    for config in result.scalars().all():
+        if scene in config.scenes:
+            return AIClient(config.base_url, config.api_key, config.model_name)
+
+    # 3. 兜底
+    return AIClient(
+        base_url="https://api.deepseek.com",
+        api_key=settings.DEEPSEEK_API_KEY or "",
+        model_name="deepseek-chat",
+    )
 ```
 
+**说明**：用户如果没有配置任何模型，系统读取环境变量 DEEPSEEK_API_KEY 做兜底。用户在前端配置模型后，完全使用用户配置，API Key 存储在数据库中。
+
+---
+
+### 4.2a 模型配置 API
+
 ```python
-# server/app/services/ai/kimi.py
-from app.services.ai.client import AIClient
-from app.config import settings
+# server/app/api/model_config.py
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.database import get_db
+from app.models.model_config import UserModelConfig
+from app.schemas.model_config import ModelConfigCreate, ModelConfigUpdate, ModelConfigResponse
+from app.middleware.auth import get_current_user
+
+router = APIRouter()
 
 
-class KimiClient(AIClient):
-    def __init__(self):
-        super().__init__(
-            settings.KIMI_API_KEY,
-            "https://api.moonshot.cn",
-            "moonshot-v1-auto"
+@router.get("/", response_model=list[ModelConfigResponse])
+async def list_configs(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取用户的所有模型配置"""
+    result = await db.execute(
+        select(UserModelConfig)
+        .where(UserModelConfig.user_id == user_id)
+        .order_by(UserModelConfig.sort_order)
+    )
+    configs = result.scalars().all()
+    return [ModelConfigResponse.model_validate(c) for c in configs]
+
+
+@router.post("/", response_model=ModelConfigResponse, status_code=201)
+async def create_config(
+    data: ModelConfigCreate,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """新增模型配置"""
+    config = UserModelConfig(
+        user_id=user_id,
+        name=data.name,
+        base_url=data.base_url,
+        api_key=data.api_key,
+        model_name=data.model_name,
+        scenes=data.scenes,
+    )
+    db.add(config)
+    await db.commit()
+    await db.refresh(config)
+    return ModelConfigResponse.model_validate(config)
+
+
+@router.put("/{config_id}", response_model=ModelConfigResponse)
+async def update_config(
+    config_id: str,
+    data: ModelConfigUpdate,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新模型配置"""
+    result = await db.execute(
+        select(UserModelConfig).where(
+            UserModelConfig.id == config_id,
+            UserModelConfig.user_id == user_id,
         )
-```
+    )
+    config = result.scalar_one_or_none()
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
 
-```python
-# server/app/services/ai/router.py
-from app.services.ai.deepseek import DeepSeekClient
-from app.services.ai.kimi import KimiClient
-from app.config import settings
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(config, key, value)
+
+    await db.commit()
+    await db.refresh(config)
+    return ModelConfigResponse.model_validate(config)
 
 
-class ModelRouter:
-    """按场景选择模型"""
+@router.delete("/{config_id}", status_code=204)
+async def delete_config(
+    config_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除模型配置"""
+    result = await db.execute(
+        select(UserModelConfig).where(
+            UserModelConfig.id == config_id,
+            UserModelConfig.user_id == user_id,
+        )
+    )
+    config = result.scalar_one_or_none()
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
+    await db.delete(config)
+    await db.commit()
 
-    RULES = {
-        "chapter_generate": "deepseek",
-        "chapter_review": "kimi",
-        "outline_generate": "deepseek",
-        "analysis": "kimi",
-        "de_ai": "deepseek",
-        "dialogue_optimize": "deepseek",
-        "outline_review": "deepseek",
+
+@router.get("/scenes")
+async def list_scenes():
+    """返回所有可用场景标识符列表"""
+    return {
+        "scenes": [
+            {"id": "chapter_planner", "name": "情节规划", "module": "写正文"},
+            {"id": "chapter_writer", "name": "正文写手", "module": "写正文"},
+            {"id": "de_ai", "name": "去AI味", "module": "写正文"},
+            {"id": "proofreader", "name": "审校", "module": "写正文"},
+            {"id": "chapter_review", "name": "章节审查", "module": "审查"},
+            {"id": "outline_generate", "name": "大纲生成", "module": "大纲"},
+            {"id": "outline_review", "name": "大纲审查", "module": "大纲"},
+            {"id": "analysis", "name": "拆书分析", "module": "拆书"},
+            {"id": "dialogue", "name": "对话优化", "module": "写作"},
+        ]
     }
+```
 
-    def __init__(self):
-        self.clients = {
-            "deepseek": DeepSeekClient(),
-            "kimi": KimiClient(),
-        }
+And also the Pydantic schemas for model_config:
 
-    def get_client(self, scene: str) -> AIClient:
-        model = self.RULES.get(scene, "deepseek")
-        return self.clients[model]
+```python
+# server/app/schemas/model_config.py
+from pydantic import BaseModel
+from typing import Optional
 
 
-model_router = ModelRouter()
+class ModelConfigCreate(BaseModel):
+    name: str
+    base_url: str
+    api_key: str
+    model_name: str
+    scenes: list[str] = []
+
+
+class ModelConfigUpdate(BaseModel):
+    name: Optional[str] = None
+    base_url: Optional[str] = None
+    api_key: Optional[str] = None
+    model_name: Optional[str] = None
+    scenes: Optional[list[str]] = None
+    is_active: Optional[bool] = None
+
+
+class ModelConfigResponse(BaseModel):
+    id: str
+    name: str
+    provider: str
+    base_url: str
+    model_name: str
+    scenes: list[str]
+    is_active: bool
+    sort_order: int
+
+    model_config = {"from_attributes": True}
 ```
 
 ### 4.3 认证路由
@@ -1478,7 +1680,7 @@ async def reorder_outlines(
     return {"status": "ok"}
 ```
 
-### 4.6 章节生成 API（SSE 流式）
+### 4.6 章节生成 API（SSE 流式 + 多智能体管线）
 
 ```python
 # server/app/api/chapters.py（关键部分）
@@ -1490,7 +1692,7 @@ async def generate_chapter(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """AI 生成章节正文（SSE 流式）"""
+    """AI 生成章节正文（多智能体管线 + SSE 流式）"""
     # 验证章节归属
     result = await db.execute(
         select(Chapter).where(Chapter.id == chapter_id, Chapter.book_id == book_id)
@@ -1536,88 +1738,43 @@ async def generate_chapter(
     )
     timeline_events = result.scalars().all()
 
-    # 组装上下文
-    context_parts = []
+    # 组装上下文（同前）
+    context = await ContextAssembler(db).assemble_chapter_context(
+        book_id, chapter_id
+    )
 
-    # 第一层：前文摘要
-    if prev_summaries:
-        context_parts.append("=== 前情提要 ===")
-        context_parts.extend(prev_summaries)
-
-    # 第二层：大纲节点
-    if outline:
-        context_parts.append(f"\n=== 本章大纲 ===")
-        context_parts.append(f"标题：{outline.title}")
-        context_parts.append(f"内容：{outline.content}")
-        if outline.plot_points:
-            context_parts.append(f"情节点：{json.dumps(outline.plot_points, ensure_ascii=False)}")
-
-    # 第三层：角色设定
-    if characters:
-        context_parts.append(f"\n=== 出场角色 ===")
-        for c in characters:
-            context_parts.append(
-                f"【{c.name}】{c.personality or ''} | "
-                f"说话风格：{c.speech_style} | "
-                f"爱用词：{'、'.join(c.favorite_words) if c.favorite_words else '无'}"
-            )
-
-    # 时间线注入
-    if timeline_events:
-        context_parts.append(f"\n=== 时间线 ===")
-        for e in timeline_events:
-            context_parts.append(f"第{e.day_number}天：{e.event_desc}")
-
-    context = "\n".join(context_parts)
-
-    # 组装 Prompt
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "你是一位专业的网络小说作家。请根据提供的上下文信息，撰写一章小说的正文。\n\n"
-                "写作要求：\n"
-                "1. 严格遵循大纲内容和字数目标\n"
-                "2. 角色行为必须符合其性格设定\n"
-                "3. 对话要口语化、自然，不同角色说话方式要有区别\n"
-                "4. 避免使用以下词汇：然而、但是、值得一提的是、显而易见、毫无疑问、事实上\n"
-                "5. 用动作和对话来表现情绪，不要直接描述'他感到…'\n"
-                "6. 句子长短结合，至少30%的短句（10字以内）\n"
-                "7. 对话占比不低于40%\n"
-                "8. 段落短小，每段不超过200字"
-            )
-        },
-        {
-            "role": "user",
-            "content": (
-                f"请撰写第{chapter.sort_order}章《{chapter.title}》。\n"
-                f"目标字数：{chapter.word_count_target or 2000}字\n\n"
-                f"{context}"
-            )
-        }
-    ]
-
-    client = model_router.get_client("chapter_generate")
-
-    # SSE 响应
+    # SSE 响应 — 多智能体管线执行
     async def event_stream():
         full_content = ""
-        word_controller = WordCountController(
-            target=chapter.word_count_target or 2000
+
+        # Agent 1：调用 planner 生成场景计划
+        yield f"data: {json.dumps({'type': 'stage', 'agent': 'planner', 'message': '正在规划情节...'})}\n\n"
+        scenes = await plan_chapter(
+            db, user_id, chapter.title,
+            outline.content if outline else "",
+            context, chapter.word_count_target or 2000, book_id
         )
 
-        async for chunk in client.chat_stream(messages):
-            full_content += chunk
-            control = word_controller.update(chunk)
-            yield f"data: {json.dumps({'type': 'content', 'text': chunk})}\n\n"
+        # Agent 2 (writer)：分场景逐个生成，流式返回给客户端
+        async for event in write_chapter_stream(
+            db, user_id, scenes, context,
+            chapter.word_count_target or 2000, book_id
+        ):
+            if event["type"] == "content":
+                yield f"data: {json.dumps(event)}\n\n"
+            elif event["type"] == "scene_start":
+                yield f"data: {json.dumps(event)}\n\n"
+            elif event["type"] == "scene_done":
+                yield f"data: {json.dumps(event)}\n\n"
+            full_content += event.get("text", "")
 
-            if control["action"] == "inject":
-                # 注入收尾指令
-                yield f"data: {json.dumps({'type': 'hint', 'text': control['prompt']})}\n\n"
-            elif control["action"] == "stop":
-                break
+        # Agent 3 (DeAI) 和 Agent 4 (Proofreader) 在后台异步执行
+        import asyncio
+        asyncio.ensure_future(run_post_processing(
+            db, user_id, chapter_id, full_content, book_id
+        ))
 
-        # 生成完成后保存
+        # 保存最终内容
         chapter.content = full_content
         chapter.word_count = len(full_content)
         await db.commit()
@@ -1625,6 +1782,16 @@ async def generate_chapter(
         yield f"data: {json.dumps({'type': 'done', 'word_count': len(full_content)})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+async def run_post_processing(db, user_id, chapter_id, content, book_id):
+    """后台执行去AI味和审校"""
+    from app.services.generator.de_ai import de_ai_process
+    from app.services.generator.proofreader import proofread_chapter
+    # Agent 3：去AI味
+    await de_ai_process(db, user_id, content, book_id)
+    # Agent 4：审校
+    await proofread_chapter(db, user_id, chapter_id, content, book_id)
 ```
 
 ### 4.7 审查评分 API
@@ -1678,7 +1845,7 @@ async def review_chapter_endpoint(
     timeline = result.scalars().all()
 
     # 调用 AI 审查
-    client = model_router.get_client("chapter_review")
+    client = await get_client_for_scene(db, user_id, "chapter_review")
 
     prompt = f"""请以专业网文编辑的身份，对以下章节进行7维度审查评分。
 
@@ -2364,6 +2531,43 @@ async def review_chapter_endpoint(
    - 显示该角色状态变更历史（表格）：
      | 章节 | 时间 | 位置 | 状态 | 物品/能力 |
 
+### 5.3.14 模型配置页 (`/settings/models`)
+
+**URL**: `/settings/models`
+
+**布局**：Topbar + Main Content（无 Sidebar）
+
+**页面标题**："模型配置"（text-2xl，#111827）
+
+**内容**：
+
+1. **模型配置列表**（表格形式）
+   - 每行显示：名称、供应商、模型名、关联场景标签、启用状态、排序
+   - 操作列：[编辑] [删除] [测试连接]
+   - 顶部：[添加模型] 主按钮
+
+2. **添加/编辑模型表单**（模态框，宽度 600px）
+   - 名称（text input，必填）— 用户自定义标识，如"我的 DeepSeek"
+   - Base URL（text input，必填）— 例如 `https://api.deepseek.com`
+   - API Key（password input，必填）— 明文显示切换（eye 图标）
+   - 模型名称（text input，必填）— 例如 `deepseek-chat`
+   - 场景选择（checkbox 组）— 列出所有场景标识符，用户勾选该模型负责的场景
+   - 启用状态（switch toggle）
+   - 底部：[保存] 主按钮 | [取消] 次要按钮
+
+3. **测试连接按钮**
+   - 在配置表单内或列表行操作中
+   - 点击后调用 API `/api/v1/model-configs/{id}/test`
+   - 显示连接结果：成功（绿色 ✓）/ 失败（红色 ✗ + 错误信息）
+   - 测试过程中显示加载 spinner
+
+4. **删除确认**（Dialog 组件）
+   - 标题："确认删除"
+   - 内容："删除后该配置将不可恢复，确定要删除「{name}」吗？"
+   - [取消] / [确认删除（红色）]
+
+5. **空状态**：没有配置时显示空状态提示 + "还没有模型配置，[添加第一个模型]"
+
 ### 5.4 前端 API 封装
 
 ```typescript
@@ -2455,7 +2659,155 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 ## 6. Step 4：AI 生成功能
 
-### 6.1 上下文组装器
+### 6.1 多智能体写作管线
+
+写作管线由 4 个 Agent 串联组成，每个 Agent 负责一个阶段，支持独立配置模型：
+
+```
+用户点击 [AI续写]
+     ↓
+Agent 1 (Planner)：分析大纲 + 上下文 → 输出分镜计划
+     ↓
+Agent 2 (Writer)：按分镜逐段生成正文 → 流式输出给用户
+     ↓
+Agent 3 (DeAI)：检测AI词、优化语感、确保对话口语化
+     ↓
+Agent 4 (Proofreader)：检查逻辑漏洞 → 更新角色状态和时间线
+     ↓
+生成完成
+```
+
+#### Agent 1：情节规划 (planner.py)
+
+```python
+# server/app/services/generator/planner.py
+from app.services.ai.factory import get_client_for_scene
+
+
+PLANNER_PROMPT = """你是一位专业的网络小说情节规划师。请根据以下信息，为本章制定详细的分镜写作计划。
+
+请将章节分成 3-5 个场景（scene），每个场景包含：
+1. 场景标题和功能定位（冲突建立 / 铺垫深化 / 爽点释放 / 过渡衔接 / 悬念收尾）
+2. 目标字数（基于总目标合理分配）
+3. 主要出场角色
+4. 核心情节进展
+5. 情感基调（紧张/轻松/压抑/激昂）
+
+输出JSON格式：
+{
+    "scenes": [
+        {
+            "scene_index": 1,
+            "title": "冲突爆发",
+            "function": "冲突建立",
+            "target_words": 800,
+            "characters": ["张三"],
+            "plot": "张三遭遇埋伏...",
+            "emotion": "紧张"
+        }
+    ],
+    "total_words": 3000,
+    "chapter_theme": "本章核心主题"
+}
+"""
+
+
+async def plan_chapter(
+    db, user_id: str, chapter_title: str, outline_content: str,
+    context: str, word_target: int, book_id: str = None,
+) -> list[dict]:
+    """调用规划Agent生成场景计划"""
+    client = await get_client_for_scene(db, user_id, "chapter_planner", book_id)
+    prompt = f"""章节标题：{chapter_title}
+大纲内容：{outline_content}
+上下文：{context}
+目标字数：{word_target}
+
+{PLANNER_PROMPT}"""
+    result = await client.chat([{"role": "user", "content": prompt}], temperature=0.7)
+    import json
+    plan = json.loads(result)
+    return plan["scenes"]
+```
+
+#### Agent 2：正文写手 (writer.py)
+
+```python
+# server/app/services/generator/writer.py
+from app.services.ai.factory import get_client_for_scene
+from app.services.control.word_count import WordCountController
+
+
+WRITER_SYSTEM_PROMPT = """你是一位专业的网络小说作家。请根据场景计划撰写正文。
+
+写作要求：
+1. 严格按照场景的目标字数写作
+2. 角色行为必须符合其性格设定
+3. 对话要口语化、自然，不同角色说话方式有区别
+4. 用动作和对话表现情绪，不要直接描述"他感到…"
+5. 句子长短结合，至少30%短句（10字以内）
+6. 对话占比不低于40%
+7. 段落短小，每段不超过200字"""
+
+
+async def write_scene(
+    db, user_id: str, scene_plan: dict, context: str,
+    book_id: str = None,
+) -> str:
+    """调用写手Agent生成单个场景正文"""
+    client = await get_client_for_scene(db, user_id, "chapter_writer", book_id)
+
+    scene_prompt = f"""== 场景信息 ==
+标题：{scene_plan['title']}
+功能：{scene_plan.get('function', '')}
+目标字数：{scene_plan['target_words']}字
+出场角色：{', '.join(scene_plan.get('characters', []))}
+情节：{scene_plan.get('plot', '')}
+情感基调：{scene_plan.get('emotion', '')}
+
+{context}
+
+请严格按照{scene_plan['target_words']}字左右的篇幅完成本场景的写作。"""
+
+    # 非流式生成（场景级别）
+    content = await client.chat([
+        {"role": "system", "content": WRITER_SYSTEM_PROMPT},
+        {"role": "user", "content": scene_prompt}
+    ], temperature=0.8, max_tokens=min(scene_plan['target_words'] * 2, 4096))
+
+    return content
+
+
+async def write_chapter_stream(
+    db, user_id: str, scenes: list[dict], context: str,
+    word_target: int, book_id: str = None,
+):
+    """流式生成所有场景（向客户端SSE推送）"""
+    controller = WordCountController(target=word_target)
+    full_content = ""
+
+    for i, scene in enumerate(scenes):
+        # 生成前通知客户端
+        yield {"type": "scene_start", "index": i, "title": scene["title"],
+               "target": scene["target_words"]}
+
+        content = await write_scene(db, user_id, scene, context, book_id)
+        # 补一个换行分隔场景
+        content = f"\n\n{content}\n\n"
+        full_content += content
+
+        for char in content:
+            ctrl = controller.update(char)
+            yield {"type": "content", "text": char}
+            if ctrl["action"] == "stop":
+                break
+
+        yield {"type": "scene_done", "index": i, "words": len(content)}
+
+    yield {"type": "done", "total_words": len(full_content)}
+```
+
+### 6.2 上下文组装器
 
 ```python
 # server/app/services/context/assembler.py
@@ -2563,7 +2915,7 @@ class ContextAssembler:
         return "\n".join(parts)
 ```
 
-### 6.2 字数控制服务
+### 6.3 字数控制服务
 
 ```python
 # server/app/services/control/word_count.py
@@ -2638,7 +2990,7 @@ class WordCountController:
         return min(self.current / self.target, 1.0) if self.target > 0 else 0
 ```
 
-### 6.3 去AI味 + 语感评分
+### 6.4 去AI味 + 语感评分
 
 ```python
 # server/app/services/control/de_ai.py
@@ -2772,7 +3124,7 @@ def score_flavor(text: str) -> dict:
     }
 ```
 
-### 6.4 系统常量定义
+### 6.5 系统常量定义
 
 ```python
 # 8种语音特征预设类型
@@ -2833,10 +3185,12 @@ REVIEW_THRESHOLDS = {
 ```python
 # server/app/services/control/dialogue.py
 import json
-from app.services.ai.router import model_router
+from app.services.ai.factory import get_client_for_scene
 
 
 async def optimize_dialogue(
+    db,
+    user_id: str,
     text: str,
     characters: list[dict],
     scene_type: str = "default",
@@ -2899,7 +3253,7 @@ async def optimize_dialogue(
     "issues": ["问题1", "问题2"]
 }}"""
 
-    client = model_router.get_client("dialogue_optimize")
+    client = await get_client_for_scene(db, user_id, "dialogue_optimize")
     result = await client.chat([{"role": "user", "content": prompt}], temperature=0.5)
 
     try:
@@ -3057,6 +3411,28 @@ class StateTracker:
         return issues
 ```
 
+### 7.3 多智能体审查管线
+
+章节审查由 4 个 Agent 协作完成：
+
+```
+用户点击 [审查评分]
+     ↓
+并行执行3个审查Agent:
+  ├── Agent 1 (连贯性审查)：检查剧情连贯性+时间线一致性
+  ├── Agent 2 (人设审查)：检查人设一致性+对话质量
+  └── Agent 3 (爽点审查)：检查爽点密度+节奏控制+去AI味语感
+     ↓
+  Agent 4 (综合评分)：汇总3个Agent结果 → 加权计算 → 判定 → 输出报告
+```
+
+- **Agent 1**: `coherence_agent.py` — 专注于剧情逻辑和时间线一致性审查
+- **Agent 2**: `character_agent.py` — 专注于角色一致性和对话质量审查
+- **Agent 3**: `pleasure_agent.py` — 专注于爽点密度、节奏控制和去AI味语感审查
+- **Agent 4**: `aggregator.py` — 汇总所有评分，应用权重，判定通过/不通过/重写
+
+`chapter_review.py` 编排器负责协调 4 个 Agent 的执行。
+
 ---
 
 ## 8. Step 6：拆书分析
@@ -3065,7 +3441,7 @@ class StateTracker:
 
 ```python
 # server/app/services/analysis/core.py
-from app.services.ai.router import model_router
+from app.services.ai.factory import get_client_for_scene
 
 
 ANALYSIS_PROMPT = """你是一位专业的文学分析师。请对以下小说内容进行全面拆书分析。
@@ -3102,9 +3478,16 @@ ANALYSIS_PROMPT = """你是一位专业的文学分析师。请对以下小说�
 """
 
 
-async def analyze_text(source_text: str, source_title: str, source_author: str = "") -> dict:
+async def analyze_text(
+    db,
+    user_id: str,
+    source_text: str,
+    source_title: str,
+    source_author: str = "",
+    book_id: str = None,
+) -> dict:
     """执行拆书分析"""
-    client = model_router.get_client("analysis")
+    client = await get_client_for_scene(db, user_id, "analysis", book_id)
 
     messages = [
         {
