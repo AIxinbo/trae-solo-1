@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'AI 小说写作平台',
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)]">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
