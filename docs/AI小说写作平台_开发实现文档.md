@@ -1844,13 +1844,25 @@ async def review_chapter_endpoint(
     )
     timeline = result.scalars().all()
 
+    # 获取大纲
+    result = await db.execute(
+        select(Outline).where(Outline.id == chapter.outline_id)
+    )
+    outline = result.scalar_one_or_none()
+
     # 调用 AI 审查
     client = await get_client_for_scene(db, user_id, "chapter_review")
 
-    prompt = f"""请以专业网文编辑的身份，对以下章节进行7维度审查评分。
+    prompt = f"""请以专业网文编辑的身份，对以下章节进行12维度审查评分。
+
+重要：审查时不仅看本章内容，还须对比前文情节和大纲，检测故事线是否偏离。
 
 == 前情提要 ==
 {' '.join(prev_summaries)}
+
+== 本章大纲 ==
+{outline.content if outline else '（无大纲）'}
+{json.dumps(outline.plot_points, ensure_ascii=False) if outline and outline.plot_points else ''}
 
 == 角色设定 ==
 {' '.join([f'【{c.name}】角色类型：{c.role_type}，性格：{c.personality}' for c in characters])}
@@ -1863,19 +1875,41 @@ async def review_chapter_endpoint(
 {chapter.content}
 
 == 评分要求 ==
-请按以下7个维度评分（每项0-100分），并指出具体问题：
+请按以下12个维度评分（每项0-100分），并指出具体问题：
 
-1. 剧情连贯性（权重25%）：与前文衔接是否顺畅，因果逻辑是否自洽
-2. 人设一致性（权重20%）：角色行为是否符合设定
-3. 爽点密度（权重15%）：爽点数量与分布是否合理
-4. 节奏控制（权重15%）：铺垫/冲突/高潮比例是否得当
-5. 对话质量（权重10%）：对话是否自然且有角色区分度
-6. 去AI味语感（权重10%）：是否有AI腔，语言是否自然
-7. 时间线一致性（权重5%）：时间顺序是否正确
+=== 故事逻辑组 ===
+1. 剧情连贯性（权重12%）：与前文逻辑衔接是否顺畅，因果是否自洽？是否有"凭空出现"的信息或角色？
+2. 大纲贴合度★（权重10%）：本章情节是否按照大纲走？有没有偏离主线或擅自添加不在大纲中的主要情节？如果有偏离，指出具体偏离点。
+3. 前文引用正确性★（权重8%）：文中角色引用前文发生的事件是否正确？有没有把A发生的事说成B做的？世界观规则是否被违反？
 
-请以JSON格式输出评分结果，格式：
+=== 角色组 ===
+4. 人设一致性（权重10%）：角色行为、语言、决策是否符合设定？角色是否知道本不该知道的信息？
+5. 角色情感逻辑★（权重8%）：角色情绪变化是否合理？是否有足够的铺垫和诱因？情绪转变是否突兀？
+
+=== 写作质量组 ===
+6. 爽点密度（权重10%）：爽点数量与分布是否合理？每1500-2000字是否有一个爽点？
+7. 节奏控制（权重8%）：铺垫/冲突/高潮比例是否得当？段落长短是否交替合理？
+8. 对话质量（权重8%）：对话是否自然？不同角色的说话方式是否有明显区分度？是否推进情节？
+
+=== 去AI味组 ===
+9. 去AI味-用词（权重6%）：检测"然而、但是、值得一提的是、显而易见、毫无疑问、事实上"等AI高频词密度。每500字超过2个则扣分。
+10. 去AI味-句式（权重6%）：短句（≤10字）是否占30-50%？是否有过度工整的排比句？句子开头是否多样(不总是"他/她/这/那")？
+11. 去AI味-描写手法（权重6%）：是否用动作/对话表现情绪而非直接描述"他感到…"？心理描写标签是否过多（每章超过5次扣分）？
+
+=== 一致性组 ===
+12. 时间线与伏笔（权重8%）：时间顺序/年龄/季节是否正确？前文伏笔是否被回收？新设伏笔是否合理？
+
+---
+
+审查意见要求：
+- 对每个维度给出具体的问题描述（从原文引用例子）
+- 对每个问题给出具体的修改建议
+- severity分为：high（严重问题，必须修改）、medium（建议修改）、low（小瑕疵）、info（提示）
+
+请以JSON格式输出评分结果，严格按照以下格式：
 {{
-    "剧情连贯性": {{"score": 85, "issues": [{{"severity": "low", "content": "..."}}], "suggestions": "..."}},
+    "剧情连贯性": {{"score": 85, "issues": [{{"severity": "low", "content": "第3段提到'上次的事'，但前文没有铺垫"}}], "suggestions": "建议在第1段增加一句对'上次的事'的交代"}},
+    "大纲贴合度": {{"score": 90, "issues": [], "suggestions": "完全按大纲执行"}},
     ...
 }}"""
 
@@ -1887,11 +1921,13 @@ async def review_chapter_endpoint(
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="AI 评分解析失败")
 
-    # 计算总分
+    # 计算总分（12维度加权）
     WEIGHTS = {
-        "剧情连贯性": 0.25, "人设一致性": 0.20, "爽点密度": 0.15,
-        "节奏控制": 0.15, "对话质量": 0.10, "去AI味语感": 0.10,
-        "时间线一致性": 0.05
+        "剧情连贯性": 0.12, "大纲贴合度": 0.10, "前文引用正确性": 0.08,
+        "人设一致性": 0.10, "角色情感逻辑": 0.08,
+        "爽点密度": 0.10, "节奏控制": 0.08, "对话质量": 0.08,
+        "去AI味-用词": 0.06, "去AI味-句式": 0.06, "去AI味-描写手法": 0.06,
+        "时间线与伏笔": 0.08,
     }
     overall = sum(scores[d]["score"] * WEIGHTS[d] for d in WEIGHTS)
 
@@ -2993,53 +3029,116 @@ class WordCountController:
 ### 6.4 去AI味 + 语感评分
 
 ```python
-# server/app/services/control/de_ai.py
+# server/app/services/generator/de_ai.py
+"""
+去AI味 Agent — 多维度检测+改写
+位于 generator/ 下，作为多智能体写作管线的 Agent 3
+"""
 
-AI_FLAVOR_WORDS = [
-    "然而", "但是", "不过", "值得一提的是",
-    "显而易见", "毫无疑问", "事实上", "换句话说",
-    "简而言之", "不可否认", "值得注意的是", "总体而言",
-    "从某种角度来说", "在一定程度", "不可忽视的是",
+# ==================== 检测词库 ====================
+
+# AI高频词（第1类：转折/总结类）
+AI_TURNING_WORDS = [
+    "然而", "但是", "不过", "可是", "却",
+    "尽管如此", "即便如此", "话虽如此",
 ]
 
+AI_SUMMARY_WORDS = [
+    "值得一提的是", "显而易见", "毫无疑问", "事实上",
+    "换句话说", "简而言之", "不可否认", "值得注意的是",
+    "总体而言", "从某种角度来说", "在一定程度上",
+    "不可忽视的是", "需要指出的是", "不得不承认",
+    "平心而论", "客观来说", "坦白说",
+]
+
+# AI高频词（第2类：强调/递进类）
+AI_EMPHASIS_WORDS = [
+    "尤为", "尤为突出", "格外", "愈发",
+    "越发", "愈加", "倍加",
+    "所谓的", "某种意义上的",
+]
+
+# AI句式模式
+AI_SENTENCE_STARTS = [
+    "这意味", "这表", "这说", "这体现",
+    "这反映", "这揭示", "这凸显",
+    "正如前文所述", "如前所述",
+]
+
+# 心理描写标签
 PSYCH_PATTERNS = [
     "他感到", "她感到", "他心里想", "她心里想",
     "他意识到", "她意识到", "他忽然觉得", "她忽然觉得",
     "他明白", "她明白", "他清楚", "她清楚",
+    "他察觉", "她察觉", "他感知", "她感知",
+    "他心中", "她心中", "他内心", "她内心",
+    "他的心里", "她的心里",
+]
+
+# "展示vs告知" 扣分模式 — 用告知代替展示
+TELL_PATTERNS = [
+    "他很生气", "她很开心", "他很伤心", "她很害怕",
+    "他很紧张", "他很兴奋", "他很失落", "他很绝望",
+    "他很惊讶", "他很尴尬", "他很委屈", "他很愧疚",
+    "他非常愤怒", "她非常高兴",
 ]
 
 
 def score_flavor(text: str) -> dict:
     """
-    网文语感评分（0-100）
-    返回评分明细
+    网文语感评分（0-100）— 6维度检测
+    阈值：≥75 合格，<75 触发自动改写Pass
     """
     score = 100
+    details = {}
+    total_len = max(len(text), 1)
 
-    # === 1. AI词密度检测（权重25%） ===
-    word_count = 0
-    for word in AI_FLAVOR_WORDS:
-        word_count += text.count(word)
-    expected_max = max(int(len(text) / 500 * 2), 1)
-    if word_count > expected_max:
-        penalty = int((word_count - expected_max) * 10)
-        score -= min(penalty, 25)
-        ai_word_penalty = min(penalty, 25)
+    # === 1. AI转折词密度（15分） ===
+    count1 = sum(text.count(w) for w in AI_TURNING_WORDS)
+    count2 = sum(text.count(w) for w in AI_SUMMARY_WORDS)
+    ai_word_total = count1 + count2
+    expected_max = max(int(total_len / 500 * 2), 1)
+    if ai_word_total > expected_max:
+        penalty = min(int((ai_word_total - expected_max) * 8), 15)
+        score -= penalty
+        turning_penalty = penalty
     else:
-        ai_word_penalty = 0
+        turning_penalty = 0
+    details["ai_turning_words"] = {"count": ai_word_total, "expected_max": expected_max, "penalty": turning_penalty}
 
-    # === 2. 心理描写检测 ===
-    psych_count = 0
-    for pat in PSYCH_PATTERNS:
-        psych_count += text.count(pat)
+    # === 2. 强调词密度（10分） ===
+    emph_count = sum(text.count(w) for w in AI_EMPHASIS_WORDS)
+    if emph_count > 3:
+        penalty = min(emph_count * 3, 10)
+        score -= penalty
+        emph_penalty = penalty
+    else:
+        emph_penalty = 0
+    details["emphasis_words"] = {"count": emph_count, "penalty": emph_penalty}
+
+    # === 3. 心理描写密度（15分） ===
+    psych_count = sum(text.count(p) for p in PSYCH_PATTERNS)
     if psych_count > 5:
-        penalty = min(psych_count * 4, 20)
+        penalty = min(psych_count * 3, 15)
         score -= penalty
         psych_penalty = penalty
     else:
         psych_penalty = 0
+    details["psych_desc"] = {"count": psych_count, "penalty": psych_penalty}
 
-    # === 3. 短句比例检测（权重20%） ===
+    # === 4. 展示vs告知（15分） ===
+    tell_count = sum(text.count(p) for p in TELL_PATTERNS)
+    if tell_count > 0:
+        penalty = min(tell_count * 5, 15)
+        score -= penalty
+        tell_penalty = penalty
+    else:
+        tell_penalty = 0
+    details["show_vs_tell"] = {"count": tell_count, "penalty": tell_penalty}
+
+    # === 5. 句式多样性（15分） ===
+
+    # 5a. 短句比例
     separators = "！？。\n"
     sentences = []
     buf = ""
@@ -3058,17 +3157,35 @@ def score_flavor(text: str) -> dict:
         short_count = sum(1 for s in sentences if len(s) <= 10)
         short_ratio = short_count / len(sentences)
         if short_ratio < 0.25:
-            score -= 20
-            short_penalty = 20
+            score -= 8
+            short_penalty = 8
         elif short_ratio < 0.30:
-            score -= 10
-            short_penalty = 10
+            score -= 4
+            short_penalty = 4
         else:
             short_penalty = 0
     else:
         short_penalty = 0
 
-    # === 4. 对话占比检测（权重20%） ===
+    # 5b. 句子开头多样性
+    if sentences:
+        unique_starts = len(set(s[:2] for s in sentences if len(s) >= 2))
+        if unique_starts < 5:
+            score -= 7
+            start_penalty = 7
+        else:
+            start_penalty = 0
+    else:
+        start_penalty = 0
+
+    details["sentence_diversity"] = {
+        "short_ratio": round(short_ratio, 2),
+        "short_penalty": short_penalty,
+        "unique_starts": unique_starts if sentences else 0,
+        "start_penalty": start_penalty,
+    }
+
+    # === 6. 对话占比 + 段落长度（10分） ===
     in_dialogue = False
     dialogue_chars = 0
     for ch in text:
@@ -3078,49 +3195,99 @@ def score_flavor(text: str) -> dict:
             in_dialogue = False
         elif in_dialogue:
             dialogue_chars += 1
-    total_len = max(len(text), 1)
     dialogue_ratio = dialogue_chars / total_len
 
+    dialogue_penalty = 0
     if dialogue_ratio < 0.30:
-        score -= 20
-        dialogue_penalty = 20
+        dialogue_penalty = 6
+        score -= 6
     elif dialogue_ratio < 0.35:
-        score -= 10
-        dialogue_penalty = 10
-    else:
-        dialogue_penalty = 0
+        dialogue_penalty = 3
+        score -= 3
 
-    # === 5. 段落长度检测（权重15%） ===
+    # 段落长度检测
     paragraphs = [p for p in text.split("\n") if p.strip()]
+    para_penalty = 0
     if paragraphs:
         avg_para_len = sum(len(p) for p in paragraphs) / len(paragraphs)
         if avg_para_len > 200:
-            score -= 15
-            para_penalty = 15
-        elif avg_para_len > 150:
-            score -= 8
-            para_penalty = 8
-        else:
-            para_penalty = 0
-    else:
-        para_penalty = 0
+            para_penalty = 4
+            score -= 4
 
+    details["paragraph_dialogue"] = {
+        "dialogue_ratio": round(dialogue_ratio, 2),
+        "dialogue_penalty": dialogue_penalty,
+        "avg_para_len": round(avg_para_len, 1) if paragraphs else 0,
+        "para_penalty": para_penalty,
+    }
+
+    # === 综合 ===
     return {
         "score": max(score, 0),
-        "details": {
-            "ai_word_count": word_count,
-            "expected_max": expected_max,
-            "ai_word_penalty": ai_word_penalty,
-            "psych_count": psych_count,
-            "psych_penalty": psych_penalty,
-            "short_ratio": round(short_ratio, 2),
-            "short_penalty": short_penalty,
-            "dialogue_ratio": round(dialogue_ratio, 2),
-            "dialogue_penalty": dialogue_penalty,
-            "avg_para_len": round(avg_para_len, 1) if paragraphs else 0,
-            "para_penalty": para_penalty,
-        },
+        "details": details,
         "passed": score >= 75,
+        "needs_rewrite": score < 75,
+    }
+
+
+# ==================== AI改写Pass ====================
+
+DE_AI_REWRITE_PROMPT = """你是一位专业的网文编辑，擅长去除AI腔。请对以下文本进行改写，使其读起来像人写的网文。
+
+改写要求：
+1. 删除或替换以下AI高频词：然而、但是、值得一提的是、显而易见、毫无疑问、事实上、换句话说、简而言之
+2. 将"他感到/她意识到/他心里想"等心理描写标签改为动作或对话表现
+   ❌ "他感到非常愤怒"
+   ✅ "他一拳砸在桌上，茶杯跳了起来"
+3. 增加短句比例，长短句交替使用
+4. 确保对话占比不低于40%，使用语气词（啊、嘛、吧、呢）
+5. 避免工整的排比句
+6. 不同角色说话方式要有区分度
+7. 段落不要太长，每段不超过200字
+
+原文：
+{text}
+
+请直接输出改写后的文本，不要加任何解释。"""
+
+
+async def de_ai_process(
+    db, user_id: str, text: str, book_id: str = None,
+) -> dict:
+    """
+    去AI味完整流程：评分 → 检测 → 决定是否改写
+    返回：{"original": ..., "optimized": ..., "score": ..., "rewritten": bool}
+    """
+    from app.services.ai.factory import get_client_for_scene
+
+    # 第一步：评分
+    score_result = score_flavor(text)
+
+    if score_result["passed"]:
+        return {
+            "original": text,
+            "optimized": text,
+            "score": score_result["score"],
+            "rewritten": False,
+            "details": score_result["details"],
+        }
+
+    # 第二步：调用AI改写
+    client = await get_client_for_scene(db, user_id, "de_ai", book_id)
+    optimized = await client.chat([
+        {"role": "system", "content": "你是一位专业的网文编辑，擅长去AI腔。"},
+        {"role": "user", "content": DE_AI_REWRITE_PROMPT.format(text=text)},
+    ], temperature=0.6)
+
+    # 第三步：改写后再评分
+    post_score = score_flavor(optimized)
+
+    return {
+        "original": text,
+        "optimized": optimized if post_score["passed"] else text,
+        "score": post_score["score"],
+        "rewritten": True,
+        "details": post_score["details"],
     }
 ```
 
@@ -3152,15 +3319,29 @@ SPEECH_TEMPLATES = {
                  "favorite": [], "forbidden": []},
 }
 
-# 7维度评分权重
+# 12维度评分权重（展开版）
 REVIEW_WEIGHTS = {
-    "剧情连贯性": 0.25,
-    "人设一致性": 0.20,
-    "爽点密度":   0.15,
-    "节奏控制":   0.15,
-    "对话质量":   0.10,
-    "去AI味语感": 0.10,
-    "时间线一致性": 0.05,
+    # === 故事逻辑组 (30%) ===
+    "剧情连贯性":     0.12,  # 与前文逻辑衔接、因果自洽
+    "大纲贴合度":     0.10,  # ★NEW: 是否按大纲走，情节是否偏离主线
+    "前文引用正确性": 0.08,  # ★NEW: 引用前文事件/数据是否正确
+
+    # === 角色组 (18%) ===
+    "人设一致性":     0.10,  # 角色行为、决策符合设定
+    "角色情感逻辑":   0.08,  # ★NEW: 情绪变化合理、有足够铺垫
+
+    # === 写作质量组 (26%) ===
+    "爽点密度":       0.10,  # 爽点分布合理、类型多样
+    "节奏控制":       0.08,  # 张弛有度、段落长短合理
+    "对话质量":       0.08,  # 自然度、角色区分度
+
+    # === 去AI味组 (18%) ===
+    "去AI味-用词":    0.06,  # ★NEW(分拆): AI高频词密度
+    "去AI味-句式":    0.06,  # ★NEW(分拆): 短句比例、句式多样性
+    "去AI味-描写手法": 0.06, # ★NEW(分拆): 展示vs告知、心理描写密度
+
+    # === 一致性组 (8%) ===
+    "时间线与伏笔":   0.08,  # ★NEW: 时间线正确 + 伏笔有回收
 }
 
 # 评分阈值
@@ -3419,19 +3600,87 @@ class StateTracker:
 用户点击 [审查评分]
      ↓
 并行执行3个审查Agent:
-  ├── Agent 1 (连贯性审查)：检查剧情连贯性+时间线一致性
-  ├── Agent 2 (人设审查)：检查人设一致性+对话质量
-  └── Agent 3 (爽点审查)：检查爽点密度+节奏控制+去AI味语感
+  ├── Agent 1 (连贯性审查)
+  │    ├── 剧情连贯性
+  │    ├── 大纲贴合度★      ← 检测是否偏离主线
+  │    └── 前文引用正确性★  ← 检测前文引用错误
+  │
+  ├── Agent 2 (人设审查)
+  │    ├── 人设一致性
+  │    ├── 角色情感逻辑★
+  │    └── 对话质量
+  │
+  └── Agent 3 (爽点+去AI味审查)
+       ├── 爽点密度
+       ├── 节奏控制
+       ├── 去AI味-用词       ← 拆分3个子维度
+       ├── 去AI味-句式
+       └── 去AI味-描写手法
      ↓
-  Agent 4 (综合评分)：汇总3个Agent结果 → 加权计算 → 判定 → 输出报告
+  Agent 4 (综合评分)：汇总3个Agent结果 → 12维度加权计算
+                           → 判定(≥85通过/70-84建议/<60重写)
+                           → 输出详细审查报告
 ```
 
-- **Agent 1**: `coherence_agent.py` — 专注于剧情逻辑和时间线一致性审查
-- **Agent 2**: `character_agent.py` — 专注于角色一致性和对话质量审查
-- **Agent 3**: `pleasure_agent.py` — 专注于爽点密度、节奏控制和去AI味语感审查
-- **Agent 4**: `aggregator.py` — 汇总所有评分，应用权重，判定通过/不通过/重写
+- **Agent 1**: `coherence_agent.py` — 专注于剧情逻辑、大纲贴合度、前文引用正确性审查
+- **Agent 2**: `character_agent.py` — 专注于角色一致性、角色情感逻辑、对话质量审查
+- **Agent 3**: `pleasure_agent.py` — 专注于爽点密度、节奏控制、去AI味用词/句式/描写手法审查
+- **Agent 4**: `aggregator.py` — 汇总所有评分，12维度加权计算，按阈值判定，生成审查报告
 
 `chapter_review.py` 编排器负责协调 4 个 Agent 的执行。
+
+```python
+# server/app/services/review/coherence_agent.py
+"""Agent 1：连贯性审查 — 剧情连贯性 + 大纲贴合度 + 前文引用正确性"""
+from app.services.ai.factory import get_client_for_scene
+
+
+COHERENCE_PROMPT = """你是一位专注审查剧情逻辑的网文编辑。请严格审查以下3个维度：
+
+1. 剧情连贯性（0-100分）：本章与前文的事件衔接是否顺畅？
+   - 是否有"凭空出现"的信息或角色？
+   - 因果逻辑链条是否完整？
+   - 新情节点是否有合理铺垫？
+
+2. 大纲贴合度（0-100分）：本章是否严格按大纲执行？
+   - 有没有遗漏大纲中设定的情节点？
+   - 有没有擅自添加大纲中没有的主要情节？
+   - 如果有偏离，具体偏离了多少？
+
+3. 前文引用正确性（0-100分）：文中引用前文的内容是否正确？
+   - 角色提到的"上次的事"是否真实发生过？
+   - 世界观规则是否被违反？
+   - 角色的知识边界是否正确（不该知道的信息是否出现）？
+
+== 本章大纲 ==
+{outline}
+
+== 前情提要 ==
+{previous_summaries}
+
+== 角色知识边界 ==
+{character_knowledge}
+
+== 待审查章节 ==
+{chapter_content}
+
+请输出JSON格式：
+{{
+    "剧情连贯性": {{"score": 85, "issues": [...], "suggestions": "..."}},
+    "大纲贴合度": {{"score": 90, "issues": [...], "suggestions": "..."}},
+    "前文引用正确性": {{"score": 80, "issues": [...], "suggestions": "..."}}
+}}"""
+```
+
+```python
+# server/app/services/review/character_agent.py
+"""Agent 2：人设审查 — 人设一致性 + 角色情感逻辑 + 对话质量"""
+```
+
+```python
+# server/app/services/review/pleasure_agent.py
+"""Agent 3：爽点审查 — 爽点密度 + 节奏控制 + 去AI味用词/句式/描写手法"""
+```
 
 ---
 
