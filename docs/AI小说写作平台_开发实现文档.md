@@ -144,7 +144,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 │       │   ├── review.py
 │       │   ├── analysis.py
 │       │   ├── timeline.py
-│       │   └── model_config.py      # 模型配置API
+│       │   ├── model_config.py      # 模型配置API
+│       │   └── writing_logs.py      # 写作历程日志API
 │       ├── services/
 │       │   ├── __init__.py
 │       │   ├── ai/
@@ -556,6 +557,7 @@ async def init_db():
         from app.models.timeline import TimelineEvent, CharStateLog
         from app.models.analysis import AnalysisRecord
         from app.models.model_config import UserModelConfig
+        from app.models.writing_log import WritingLog
         await conn.run_sync(Base.metadata.create_all)
 ```
 
@@ -931,12 +933,36 @@ class AnalysisRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 ```
 
+#### models/writing_log.py
+
+```python
+# server/app/models/writing_log.py
+"""写作历程日志 — 记录用户关键操作，在工作台展示"""
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, DateTime, JSON, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID
+from app.database import Base
+
+
+class WritingLog(Base):
+    __tablename__ = "writing_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    book_id = Column(UUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    action = Column(String(50), nullable=False)           # create_book / generate_outline / create_char / generate_detailed_outline / write_chapter / review_pass
+    description = Column(String(300), nullable=False)      # 人类可读的描述
+    metadata = Column(JSON, default=dict)                  # 关联ID: { "chapter_id": "...", "score": 86 }
+    created_at = Column(DateTime, default=datetime.utcnow)
+```
+
 ### 3.7 路由注册
 
 ```python
 # server/app/api/router.py
 from fastapi import APIRouter
-from app.api import auth, books, outlines, detailed_outlines, characters, chapters, review, analysis, timeline, model_config
+from app.api import auth, books, outlines, detailed_outlines, characters, chapters, review, analysis, timeline, model_config, writing_logs
 
 api_router = APIRouter()
 
@@ -950,6 +976,7 @@ api_router.include_router(review.router, prefix="/review", tags=["审查评分"]
 api_router.include_router(analysis.router, prefix="/analysis", tags=["拆书分析"])
 api_router.include_router(timeline.router, prefix="/books", tags=["时间线"])
 api_router.include_router(model_config.router, prefix="/model-configs", tags=["模型配置"])
+api_router.include_router(writing_logs.router, prefix="/books", tags=["写作历程"])
 ```
 
 ### 3.8 Pydantic Schema 示例
@@ -1602,6 +1629,74 @@ class DetailedOutlineResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 ```
+
+#### 写作历程日志 API
+
+```python
+# server/app/api/writing_logs.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.database import get_db
+from app.models.writing_log import WritingLog
+from app.middleware.auth import get_current_user
+
+router = APIRouter()
+
+
+@router.get("/{book_id}/writing-logs")
+async def list_writing_logs(
+    book_id: str,
+    limit: int = 20,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取写作历程日志（按时间倒序）"""
+    result = await db.execute(
+        select(WritingLog)
+        .where(WritingLog.book_id == book_id)
+        .order_by(WritingLog.created_at.desc())
+        .limit(limit)
+    )
+    logs = result.scalars().all()
+    return [
+        {
+            "id": str(log.id),
+            "action": log.action,
+            "description": log.description,
+            "metadata": log.metadata,
+            "created_at": log.created_at.isoformat(),
+        }
+        for log in logs
+    ]
+```
+
+后端在关键操作节点自动写入日志（在对应的 service/API 中调用）：
+
+```python
+# 日志写入工具函数
+async def log_action(db, book_id, user_id, action, description, metadata=None):
+    log = WritingLog(
+        book_id=book_id,
+        user_id=user_id,
+        action=action,
+        description=description,
+        metadata=metadata or {},
+    )
+    db.add(log)
+    await db.commit()
+```
+
+**自动写入时机**：
+
+| 操作 | action | description |
+|------|--------|-------------|
+| 创建项目 | `create_book` | "创建项目《标题》" |
+| 大纲生成完成 | `generate_outline` | "生成大纲：X卷X章" |
+| 创建角色 | `create_character` | "创建角色：张三、李四" |
+| 细纲生成完成 | `generate_detailed_outline` | "创建细纲：第N章 × X个场景" |
+| AI写作完成 | `write_chapter` | "第N章《标题》AI写作完成 (X字)" |
+| 审查通过 | `review_pass` | "第N章《标题》审查通过 (XX分)" |
 
 ### 4.3 认证路由
 
@@ -2486,9 +2581,49 @@ async def review_chapter_endpoint(
    ```
    - 每个进度项左侧：● 已完成（绿色） / ○ 进行中（蓝色） / ○ 未开始（灰色）
    - 右侧链接点击跳转到对应页面
-   - 自动推荐下一步："下一步：写第4章"（黄色高亮）
 
-3. **快捷操作卡片组**（3 张并排，白色背景，圆角 lg，阴影 sm）：
+   **推荐下一步逻辑**（黄色高亮条，位于进度条下方）：
+   ```
+   ┌────────────────────────────────────────────────────────┐
+   │  💡 推荐下一步：创建角色 → [去角色管理]               │
+   └────────────────────────────────────────────────────────┘
+   ```
+   判断规则（优先级从上到下）：
+   ```
+   if 大纲节点数 == 0:
+       推荐 = "创建作品大纲 → 去大纲管理"
+   elif 细纲场景数 == 0:
+       推荐 = "为第1章创建细纲 → 去细纲创作"
+   elif 角色数 == 0:
+       推荐 = "创作故事角色 → 去角色管理"
+   elif 存在状态="draft"的章节:
+       推荐 = "继续写作《第N章》→ 去编辑器"
+   elif 存在状态="review"的章节:
+       推荐 = "审查《第N章》→ 去审查"
+   else:
+       推荐 = "创建下一章 → 去章节管理"
+   ```
+
+3. **写作历程日志**（全宽卡片，白色背景，圆角 lg，阴影 sm，padding 20px）：
+   - 标题："📋 写作历程"（text-lg，加粗）
+   - 按时间倒序显示用户已完成的操作步骤
+   ```
+   ┌──────────────────────────────────────────────────────────┐
+   │  📋 写作历程                                             │
+   │                                                          │
+   │  ✅ 2026-06-19 14:30  第3章《迷雾》审查通过 (86分)      │
+   │  ✅ 2026-06-19 10:20  第3章《迷雾》AI写作完成 (2400字) │
+   │  ✅ 2026-06-18 16:00  创建细纲：第3章 × 4个场景        │
+   │  ✅ 2026-06-17 11:30  创建角色：张三、李四、王五        │
+   │  ✅ 2026-06-16 09:00  生成大纲：3卷8章                  │
+   │  ✅ 2026-06-15 14:00  创建项目《我的小说》              │
+   └──────────────────────────────────────────────────────────┘
+   ```
+   - 每条日志格式：状态图标 + 时间 + 操作描述
+   - 数据来源：后端 `writing_logs` 表（每次关键操作自动写入一条记录）
+   - 空状态："还没有操作记录，开始你的创作之旅吧！"
+
+4. **快捷操作卡片组**（3 张并排，白色背景，圆角 lg，阴影 sm）：
    ```
    ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
    │ ✍️ 写新章节   │ │ 🤖 AI续写    │ │ 📊 创作统计  │
@@ -2500,7 +2635,7 @@ async def review_chapter_endpoint(
    - 卡片 2：最近编辑章节的快速入口
    - 卡片 3：创作统计（总字数、本周新增字数、连续写作天数）
 
-4. **最近章节列表**：
+5. **最近章节列表**：
    - 最近修改的 5 个章节
    - 每项：章节标题 + 状态标签 + 字数 + 更新时间 + [编辑] 链接
 
@@ -2661,7 +2796,9 @@ async def review_chapter_endpoint(
 
 **内容**：
 1. 页面标题："章节管理"
-2. [新建章节] 按钮
+2. [新建章节] 按钮 — 点击后弹出新建章节对话框（标题 + 关联大纲节点 + 目标字数）
+   - **创建后自动跳转到编辑器页** `/book/[id]/chapter/[chapterId]`
+   - 同时自动写入一条写作历程日志："创建章节《标题》"
 3. 章节列表（表格形式）
 
 **表格列**：
@@ -2848,10 +2985,24 @@ async def review_chapter_endpoint(
    用户修改完成后 → 点击 [重新审查] 再次评分
        ↓
    评分 ≥85 → 章节状态自动变为"已完成"
+            → 自动写入历程日志："第N章《标题》审查通过 (XX分)"
    ```
    - 审查侧栏（编辑器内）：左侧问题列表，每条可点击跳转到原文位置
    - 原文高亮标注：问题对应段落用黄色背景色高亮
    - 修改完成后自动保存，点击"重新审查"触发新一轮评分
+   - **自动状态流转**：
+     ```
+     章节状态流转：
+       草稿(draft) → 点击审查 → 待审查(review) → 评分≥85 → 已完成(done)
+                                                  → 评分<85 → 回到草稿(draft)
+     ```
+   - **关键操作自动写日志**（后端在以下时机自动写入 `writing_logs` 表）：
+     - 创建项目时 → "创建项目《标题》"
+     - 生成大纲完成时 → "生成大纲：X卷X章"
+     - 创建角色时 → "创建角色：名称1、名称2"
+     - 创建细纲完成时 → "创建细纲：第N章 × X个场景"
+     - AI写作完成时 → "第N章《标题》AI写作完成 (X字)"
+     - 审查通过时 → "第N章《标题》审查通过 (XX分)"
 
 #### 5.3.12 拆书分析页 (`/book/[id]/analysis`)
 

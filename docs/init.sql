@@ -260,6 +260,22 @@ CREATE INDEX idx_detailed_outlines_chapter ON detailed_outlines(chapter_id);
 CREATE INDEX idx_detailed_outlines_scene ON detailed_outlines(chapter_id, scene_index);
 
 -- ============================================================
+-- 13. 写作历程日志表
+-- ============================================================
+CREATE TABLE writing_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action VARCHAR(50) NOT NULL,
+    description VARCHAR(300) NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_writing_logs_book ON writing_logs(book_id);
+CREATE INDEX idx_writing_logs_time ON writing_logs(book_id, created_at DESC);
+
+-- ============================================================
 -- 全部建表完成
--- 共 12 张表
+-- 共 13 张表
 -- ============================================================
