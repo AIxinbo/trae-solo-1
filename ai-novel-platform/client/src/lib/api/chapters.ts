@@ -21,7 +21,7 @@ export interface ChapterUpdate {
 export const chaptersApi = {
   list: (bookId: string) => api.get<Chapter[]>(`/books/${bookId}/chapters`),
   create: (bookId: string, data: ChapterCreate) => api.post<Chapter>(`/books/${bookId}/chapters`, data),
-  get: (chapterId: string) => api.get<Chapter>(`/chapters/${chapterId}`),
-  update: (chapterId: string, data: ChapterUpdate) => api.put<Chapter>(`/chapters/${chapterId}`, data),
-  delete: (chapterId: string) => api.delete<void>(`/chapters/${chapterId}`),
+  get: (chapterId: string) => api.get<Chapter>(`/books/chapters/${chapterId}`),
+  update: (chapterId: string, data: ChapterUpdate) => api.put<Chapter>(`/books/chapters/${chapterId}`, data),
+  delete: (chapterId: string) => api.delete<void>(`/books/chapters/${chapterId}`),
 };

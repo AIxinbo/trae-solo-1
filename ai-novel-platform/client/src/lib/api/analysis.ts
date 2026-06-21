@@ -39,5 +39,5 @@ export const analysisApi = {
   listRecords: (bookId: string) =>
     api.get<AnalysisRecord[]>(`/books/${bookId}/analysis-records`),
   getRecord: (recordId: string) =>
-    api.get<AnalysisRecord>(`/analysis-records/${recordId}`),
+    api.get<AnalysisRecord>(`/books/analysis-records/${recordId}`),
 };

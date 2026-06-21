@@ -26,6 +26,6 @@ export interface TimelineEventCreate {
 export const timelineApi = {
   list: (bookId: string) => api.get<TimelineEvent[]>(`/books/${bookId}/timeline`),
   create: (bookId: string, data: TimelineEventCreate) => api.post<TimelineEvent>(`/books/${bookId}/timeline`, data),
-  update: (eventId: string, data: Partial<TimelineEvent>) => api.put<TimelineEvent>(`/timeline/${eventId}`, data),
-  delete: (eventId: string) => api.delete<void>(`/timeline/${eventId}`),
+  update: (eventId: string, data: Partial<TimelineEvent>) => api.put<TimelineEvent>(`/books/timeline/${eventId}`, data),
+  delete: (eventId: string) => api.delete<void>(`/books/timeline/${eventId}`),
 };
