@@ -25,4 +25,4 @@ class Outline(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     book = relationship("Book", back_populates="outlines")
-    children = relationship("Outline", backref="parent", remote_side=[id], cascade="all, delete-orphan")
+    children = relationship("Outline", backref="parent", remote_side=[id])

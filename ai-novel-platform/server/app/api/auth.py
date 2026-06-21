@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from jose import jwt
 from datetime import datetime, timedelta
-from passlib.hash import bcrypt
+import bcrypt
 from app.database import get_db
 from app.config import settings
 from app.models.user import User
@@ -24,7 +24,7 @@ async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
     user = User(
         username=data.username,
         email=data.email,
-        password_hash=bcrypt.hash(data.password),
+        password_hash=bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode(),
         nickname=data.username,
     )
     db.add(user)
@@ -46,7 +46,7 @@ async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
 async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == data.username))
     user = result.scalar_one_or_none()
-    if not user or not bcrypt.verify(data.password, user.password_hash):
+    if not user or not bcrypt.checkpw(data.password.encode(), user.password_hash.encode()):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 
     token = jwt.encode(

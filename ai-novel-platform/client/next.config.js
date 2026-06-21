@@ -2,10 +2,11 @@
 const nextConfig = {
   output: 'standalone',
   async rewrites() {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     return [
       {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/:path*`,
+        source: '/api/v1/:path*',
+        destination: `${apiBase}/:path*`,
       },
     ];
   },
