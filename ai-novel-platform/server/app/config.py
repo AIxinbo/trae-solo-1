@@ -9,6 +9,8 @@ class Settings:
         "DATABASE_URL",
         "postgresql+asyncpg://ai_novel:changeme@localhost:5432/ai_novel"
     )
+    HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", "8000"))
     DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "dev-secret-change-in-prod")
     JWT_ALGORITHM: str = "HS256"

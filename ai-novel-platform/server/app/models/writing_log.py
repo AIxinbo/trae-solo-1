@@ -14,5 +14,5 @@ class WritingLog(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     action = Column(String(50), nullable=False)
     description = Column(String(300), nullable=False)
-    metadata = Column(JSON, default=dict)
+    extra_data = Column("metadata", JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
