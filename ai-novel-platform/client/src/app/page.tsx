@@ -6,17 +6,26 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useBookStore } from '@/lib/stores/book-store';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { BookOpen, Plus, PenLine, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function WorkbenchPage() {
   const router = useRouter();
+  const { loadFromStorage } = useAuthStore();
   const { books, fetchBooks, loading } = useBookStore();
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [genre, setGenre] = useState('玄幻');
 
-  useEffect(() => { fetchBooks(); }, [fetchBooks]);
+  useEffect(() => {
+    loadFromStorage();
+    if (!useAuthStore.getState().isLoggedIn) {
+      router.replace('/login');
+      return;
+    }
+    fetchBooks().catch(() => {});
+  }, []);
 
   const handleCreate = async () => {
     if (!title.trim()) return;
