@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>足球俱乐部数智化管理平台 · 数智绿茵</title>
+    <style id="theme-vars">
+/* @dark-only */
+/* TikTok color and type tokens */
+/* Source: structured-spec */
+
+:root {
+
+  /* solo-design consumption aliases: explicit prefix for fill-html-head.mjs */
+  --tk-background: var(--background, #ffffff);
+  --tk-foreground: var(--foreground, #0f172a);
+  --tk-card: var(--card, var(--background));
+  --tk-card-foreground: var(--card-foreground, var(--foreground));
+  --tk-popover: var(--popover, var(--card));
+  --tk-popover-foreground: var(--popover-foreground, var(--card-foreground, var(--foreground)));
+  --tk-primary: var(--primary, #111827);
+  --tk-primary-foreground: var(--primary-foreground, #ffffff);
+  --tk-secondary: var(--secondary, var(--muted, var(--card)));
+  --tk-secondary-foreground: var(--secondary-foreground, var(--foreground));
+  --tk-muted: var(--muted, var(--card));
+  --tk-muted-foreground: var(--muted-foreground, var(--foreground));
+  --tk-accent: var(--accent, var(--secondary, var(--muted, var(--card))));
+  --tk-accent-foreground: var(--accent-foreground, var(--foreground));
+  --tk-destructive: var(--destructive, #ef4444);
+  --tk-destructive-foreground: var(--destructive-foreground, #ffffff);
+  --tk-border: var(--border, currentColor);
+  --tk-input: var(--input, var(--border));
+  --tk-ring: var(--ring, var(--primary));
+  --tk-chart-1: var(--chart-1, var(--primary));
+  --tk-chart-2: var(--chart-2, var(--secondary, var(--primary)));
+  --tk-chart-3: var(--chart-3, var(--accent, var(--primary)));
+  --tk-chart-4: var(--chart-4, var(--muted-foreground, var(--foreground)));
+  --tk-chart-5: var(--chart-5, var(--foreground));
+  --tk-sidebar: var(--sidebar, var(--background));
+  --tk-sidebar-foreground: var(--sidebar-foreground, var(--foreground));
+  --tk-sidebar-primary: var(--sidebar-primary, var(--primary));
+  --tk-sidebar-primary-foreground: var(--sidebar-primary-foreground, var(--primary-foreground));
+  --tk-sidebar-accent: var(--sidebar-accent, var(--accent, var(--muted, var(--card))));
+  --tk-sidebar-accent-foreground: var(--sidebar-accent-foreground, var(--accent-foreground, var(--foreground)));
+
+  /* solo-design radius semantic aliases (mirror --tk-* color alias pattern; required by fill-html-head.mjs --prefix=tk) */
+  --tk-radius-sm: var(--radius-sm);
+  --tk-radius-md: var(--radius-md);
+  --tk-radius-lg: var(--radius-lg);
+  --tk-radius-xl: var(--radius-xl);
+
+/* Source: structured-spec */
+  /* Brand colors */
+  /* --tk-red: #FE2C55;
+  --tk-cyan: #25F4EE;
+  --tk-black: #161823;
+  --tk-white: #FFFFFF; */
+
+  /* tk-red scale · 默认 --tk-red-500 = #FE2C55 */
+  --tk-red-100: #FFE9EE;
+  --tk-red-200: #FFC9D5;
+  --tk-red-300: #FFA0B5;
+  --tk-red-400: #FF6485;
+  --tk-red-500: #FE2C55;
+  --tk-red-600: #E61E45;
+  --tk-red-700: #C01338;
+  --tk-red-800: #990C2B;
+  --tk-red-900: #6B061D;
+  --tk-red-1000: #3D0210;
+
+  /* tk-cyan scale · 默认 --tk-cyan-400 = #25F4EE */
+  --tk-cyan-100: #E3FEFD;
+  --tk-cyan-200: #BAFCFA;
+  --tk-cyan-300: #7CF8F4;
+  --tk-cyan-400: #25F4EE;
+  --tk-cyan-500: #14D6D0;
+  --tk-cyan-600: #0FB3AE;
+  --tk-cyan-700: #0C8F8B;
+  --tk-cyan-800: #086B68;
+  --tk-cyan-900: #054745;
+  --tk-cyan-1000: #022322;
+
+  /* tk-black scale · 默认 --tk-black-1000 = #161823 */
+  --tk-black-100: #EBEBED;
+  --tk-black-200: #D2D3D7;
+  --tk-black-300: #ABACB4;
+  --tk-black-400: #84868F;
+  --tk-black-500: #5D5F6B;
+  --tk-black-600: #44454F;
+  --tk-black-700: #313340;
+  --tk-black-800: #232533;
+  --tk-black-900: #1B1D29;
+  --tk-black-1000: #161823;
+
+  /* tk-white scale · 默认 --tk-white-100 = #FFFFFF */
+  --tk-white-100: #FFFFFF;
+  --tk-white-200: #FAFAFB;
+  --tk-white-300: #F2F2F4;
+  --tk-white-400: #E8E8EC;
+  --tk-white-500: #DCDCE2;
+  --tk-white-600: #C9C9D1;
+  --tk-white-700: #ABABB5;
+  --tk-white-800: #87878F;
+  --tk-white-900: #5E5E66;
+  --tk-white-1000: #36363B;
+
+  /* Brand · 品牌强调色（红主青辅，小面积高识别） */
+  --primary: #FE2C55;
+  --secondary: #25F4EE;
+
+  /* Surface · 表面层级 */
+  --background: #0B0B10;
+  --card: #161823;
+  --card-elevated: #1C1E2A;
+  --video-bg: #16161C;
+
+  /* Content · 前景内容（on-media/on-accent 为深底或强调底上的固定前景） */
+  --foreground: #F5F5F7;
+  --muted-foreground: #AEB2C0;
+  --on-media: #FFFFFF;
+  --on-accent: #161823;
+
+  /* Border · 分隔线 */
+  --border: #3A3D52;
+
+  /* Radius · 克制、偏利落的圆角语言 */
+  /* shell 仅用于 UI Kit 展示外壳；大多数真实产品容器以 sm / md / lg 为主 */
+  --radius-xs: 2px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-shell: 32px;
+  --radius-pill: 999px;
+
+  /* Success · 成功状态 */
+  --success: #10B981;
+  --success-bg: #0E2A22;
+  --success-fg: #34D399;
+
+  /* Error · 错误状态 */
+  --destructive: #E5484D;
+  --error-bg: #2E1416;
+  --error-fg: #FF6485;
+
+  /* Type families */
+  --font-display: Inter, "TikTok Display", ui-sans-serif, sans-serif;
+  --font-sans: Inter, "TikTok Sans", ui-sans-serif, sans-serif;
+  --font-serif: Georgia, Times, serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Type metrics */
+  --display-size: clamp(48px, 7vw, 96px);
+  --display-weight: 600-700;
+  --display-line-height: 0.95;
+  --display-letter-spacing: -0.02em;
+  --h2-size: 28-32;
+  --h2-weight: 600;
+  --h2-line-height: 1.15;
+  --h3-size: 18-20;
+  --h3-weight: 600;
+  --h3-line-height: 1.3;
+  --body-size: 14-15;
+  --body-weight: 400;
+  --body-line-height: 1.6;
+  --kicker-size: 11;
+  --kicker-weight: 400;
+  --kicker-letter-spacing: 0.14em;
+  --kicker-text-transform: uppercase;
+
+  /* Decorative aliases for showcase-only visuals (pitch, glows, pitch lines) */
+  --pitch-green-dark: #0c3a1e;
+  --pitch-green-mid: #134a28;
+  --on-pitch: #ffffff;
+  --on-pitch-strong: #ffffff;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--tk-background);
+    --color-foreground: var(--tk-foreground);
+    --color-card: var(--tk-card);
+    --color-card-foreground: var(--tk-card-foreground);
+    --color-popover: var(--tk-popover);
+    --color-popover-foreground: var(--tk-popover-foreground);
+    --color-primary: var(--tk-primary);
+    --color-primary-foreground: var(--tk-primary-foreground);
+    --color-secondary: var(--tk-secondary);
+    --color-secondary-foreground: var(--tk-secondary-foreground);
+    --color-muted: var(--tk-muted);
+    --color-muted-foreground: var(--tk-muted-foreground);
+    --color-accent: var(--tk-accent);
+    --color-accent-foreground: var(--tk-accent-foreground);
+    --color-destructive: var(--tk-destructive);
+    --color-destructive-foreground: var(--tk-destructive-foreground);
+    --color-border: var(--tk-border);
+    --color-input: var(--tk-input);
+    --color-ring: var(--tk-ring);
+    --color-chart-1: var(--tk-chart-1);
+    --color-chart-2: var(--tk-chart-2);
+    --color-chart-3: var(--tk-chart-3);
+    --color-chart-4: var(--tk-chart-4);
+    --color-chart-5: var(--tk-chart-5);
+    --color-sidebar: var(--tk-sidebar);
+    --color-sidebar-foreground: var(--tk-sidebar-foreground);
+    --color-sidebar-primary: var(--tk-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--tk-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--tk-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--tk-sidebar-accent-foreground);
+    --radius-sm: var(--tk-radius-sm);
+    --radius-md: var(--tk-radius-md);
+    --radius-lg: var(--tk-radius-lg);
+    --radius-xl: var(--tk-radius-xl);
+  }
+  @layer base {
+    body { background: var(--tk-background); color: var(--tk-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--tk-background); }
+      .text-background { color: var(--tk-background); }
+      .border-background { border-color: var(--tk-background); }
+      .ring-background { --tw-ring-color: var(--tk-background); }
+      .bg-foreground { background-color: var(--tk-foreground); }
+      .text-foreground { color: var(--tk-foreground); }
+      .border-foreground { border-color: var(--tk-foreground); }
+      .ring-foreground { --tw-ring-color: var(--tk-foreground); }
+      .bg-card { background-color: var(--tk-card); }
+      .text-card { color: var(--tk-card); }
+      .border-card { border-color: var(--tk-card); }
+      .ring-card { --tw-ring-color: var(--tk-card); }
+      .bg-card-foreground { background-color: var(--tk-card-foreground); }
+      .text-card-foreground { color: var(--tk-card-foreground); }
+      .border-card-foreground { border-color: var(--tk-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--tk-card-foreground); }
+      .bg-popover { background-color: var(--tk-popover); }
+      .text-popover { color: var(--tk-popover); }
+      .border-popover { border-color: var(--tk-popover); }
+      .ring-popover { --tw-ring-color: var(--tk-popover); }
+      .bg-popover-foreground { background-color: var(--tk-popover-foreground); }
+      .text-popover-foreground { color: var(--tk-popover-foreground); }
+      .border-popover-foreground { border-color: var(--tk-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--tk-popover-foreground); }
+      .bg-primary { background-color: var(--tk-primary); }
+      .text-primary { color: var(--tk-primary); }
+      .border-primary { border-color: var(--tk-primary); }
+      .ring-primary { --tw-ring-color: var(--tk-primary); }
+      .bg-primary-foreground { background-color: var(--tk-primary-foreground); }
+      .text-primary-foreground { color: var(--tk-primary-foreground); }
+      .border-primary-foreground { border-color: var(--tk-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--tk-primary-foreground); }
+      .bg-secondary { background-color: var(--tk-secondary); }
+      .text-secondary { color: var(--tk-secondary); }
+      .border-secondary { border-color: var(--tk-secondary); }
+      .ring-secondary { --tw-ring-color: var(--tk-secondary); }
+      .bg-secondary-foreground { background-color: var(--tk-secondary-foreground); }
+      .text-secondary-foreground { color: var(--tk-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--tk-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--tk-secondary-foreground); }
+      .bg-muted { background-color: var(--tk-muted); }
+      .text-muted { color: var(--tk-muted); }
+      .border-muted { border-color: var(--tk-muted); }
+      .ring-muted { --tw-ring-color: var(--tk-muted); }
+      .bg-muted-foreground { background-color: var(--tk-muted-foreground); }
+      .text-muted-foreground { color: var(--tk-muted-foreground); }
+      .border-muted-foreground { border-color: var(--tk-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--tk-muted-foreground); }
+      .bg-accent { background-color: var(--tk-accent); }
+      .text-accent { color: var(--tk-accent); }
+      .border-accent { border-color: var(--tk-accent); }
+      .ring-accent { --tw-ring-color: var(--tk-accent); }
+      .bg-accent-foreground { background-color: var(--tk-accent-foreground); }
+      .text-accent-foreground { color: var(--tk-accent-foreground); }
+      .border-accent-foreground { border-color: var(--tk-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--tk-accent-foreground); }
+      .bg-destructive { background-color: var(--tk-destructive); }
+      .text-destructive { color: var(--tk-destructive); }
+      .border-destructive { border-color: var(--tk-destructive); }
+      .ring-destructive { --tw-ring-color: var(--tk-destructive); }
+      .bg-destructive-foreground { background-color: var(--tk-destructive-foreground); }
+      .text-destructive-foreground { color: var(--tk-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--tk-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--tk-destructive-foreground); }
+      .bg-border { background-color: var(--tk-border); }
+      .text-border { color: var(--tk-border); }
+      .border-border { border-color: var(--tk-border); }
+      .ring-border { --tw-ring-color: var(--tk-border); }
+      .bg-input { background-color: var(--tk-input); }
+      .text-input { color: var(--tk-input); }
+      .border-input { border-color: var(--tk-input); }
+      .ring-input { --tw-ring-color: var(--tk-input); }
+      .bg-ring { background-color: var(--tk-ring); }
+      .text-ring { color: var(--tk-ring); }
+      .border-ring { border-color: var(--tk-ring); }
+      .ring-ring { --tw-ring-color: var(--tk-ring); }
+      .bg-chart-1 { background-color: var(--tk-chart-1); }
+      .text-chart-1 { color: var(--tk-chart-1); }
+      .border-chart-1 { border-color: var(--tk-chart-1); }
+      .ring-chart-1 { --tw-ring-color: var(--tk-chart-1); }
+      .bg-chart-2 { background-color: var(--tk-chart-2); }
+      .text-chart-2 { color: var(--tk-chart-2); }
+      .border-chart-2 { border-color: var(--tk-chart-2); }
+      .ring-chart-2 { --tw-ring-color: var(--tk-chart-2); }
+      .bg-chart-3 { background-color: var(--tk-chart-3); }
+      .text-chart-3 { color: var(--tk-chart-3); }
+      .border-chart-3 { border-color: var(--tk-chart-3); }
+      .ring-chart-3 { --tw-ring-color: var(--tk-chart-3); }
+      .bg-chart-4 { background-color: var(--tk-chart-4); }
+      .text-chart-4 { color: var(--tk-chart-4); }
+      .border-chart-4 { border-color: var(--tk-chart-4); }
+      .ring-chart-4 { --tw-ring-color: var(--tk-chart-4); }
+      .bg-chart-5 { background-color: var(--tk-chart-5); }
+      .text-chart-5 { color: var(--tk-chart-5); }
+      .border-chart-5 { border-color: var(--tk-chart-5); }
+      .ring-chart-5 { --tw-ring-color: var(--tk-chart-5); }
+      .bg-sidebar { background-color: var(--tk-sidebar); }
+      .text-sidebar { color: var(--tk-sidebar); }
+      .border-sidebar { border-color: var(--tk-sidebar); }
+      .ring-sidebar { --tw-ring-color: var(--tk-sidebar); }
+      .bg-sidebar-foreground { background-color: var(--tk-sidebar-foreground); }
+      .text-sidebar-foreground { color: var(--tk-sidebar-foreground); }
+      .border-sidebar-foreground { border-color: var(--tk-sidebar-foreground); }
+      .ring-sidebar-foreground { --tw-ring-color: var(--tk-sidebar-foreground); }
+      .bg-sidebar-primary { background-color: var(--tk-sidebar-primary); }
+      .text-sidebar-primary { color: var(--tk-sidebar-primary); }
+      .border-sidebar-primary { border-color: var(--tk-sidebar-primary); }
+      .ring-sidebar-primary { --tw-ring-color: var(--tk-sidebar-primary); }
+      .bg-sidebar-primary-foreground { background-color: var(--tk-sidebar-primary-foreground); }
+      .text-sidebar-primary-foreground { color: var(--tk-sidebar-primary-foreground); }
+      .border-sidebar-primary-foreground { border-color: var(--tk-sidebar-primary-foreground); }
+      .ring-sidebar-primary-foreground { --tw-ring-color: var(--tk-sidebar-primary-foreground); }
+      .bg-sidebar-accent { background-color: var(--tk-sidebar-accent); }
+      .text-sidebar-accent { color: var(--tk-sidebar-accent); }
+      .border-sidebar-accent { border-color: var(--tk-sidebar-accent); }
+      .ring-sidebar-accent { --tw-ring-color: var(--tk-sidebar-accent); }
+      .bg-sidebar-accent-foreground { background-color: var(--tk-sidebar-accent-foreground); }
+      .text-sidebar-accent-foreground { color: var(--tk-sidebar-accent-foreground); }
+      .border-sidebar-accent-foreground { border-color: var(--tk-sidebar-accent-foreground); }
+      .ring-sidebar-accent-foreground { --tw-ring-color: var(--tk-sidebar-accent-foreground); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+        <style>
+          /* === Hero === */
+          .hero-shell { position: relative; min-height: 92vh; overflow: hidden; }
+          .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; filter: brightness(.74) saturate(.92); }
+          .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--background) 55%, transparent) 0%, color-mix(in srgb, var(--background) 80%, transparent) 55%, color-mix(in srgb, var(--background) 97%, transparent) 100%); }
+          .hero-side-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--background) 85%, transparent) 0%, color-mix(in srgb, var(--background) 45%, transparent) 55%, color-mix(in srgb, var(--background) 12%, transparent) 100%); }
+          .hero-glow-r { position: absolute; top: -140px; right: -140px; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--primary) 22%, transparent) 0%, color-mix(in srgb, var(--primary) 0%, transparent) 70%); pointer-events: none; }
+          .hero-glow-c { position: absolute; bottom: -180px; left: -120px; width: 560px; height: 560px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--secondary) 16%, transparent) 0%, color-mix(in srgb, var(--secondary) 0%, transparent) 70%); pointer-events: none; }
+
+          /* === Sticky nav === */
+          .nav-shell { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); background: color-mix(in srgb, var(--background) 72%, transparent); border-bottom: 1px solid var(--border); }
+          .nav-link { color: var(--muted-foreground); transition: color .15s, background-color .15s; }
+          .nav-link:hover { color: var(--foreground); background: color-mix(in srgb, var(--on-media) 5%, transparent); }
+
+          /* === Kicker / headings === */
+          .kicker { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted-foreground); }
+          .display-h { font-family: var(--font-display); letter-spacing: -0.02em; line-height: 1.06; text-wrap: balance; word-break: keep-all; overflow-wrap: break-word; }
+          .mono { font-family: var(--font-mono); }
+
+          /* === Architecture === */
+          .arch-wrap { position: relative; }
+          .arch-connector { position: absolute; left: 50%; width: 1px; background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%); opacity: 0.55; transform: translateX(-0.5px); }
+          .arch-connector-h { position: absolute; height: 1px; background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%); opacity: 0.45; }
+          .arch-node-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--background); }
+
+          /* === Football pitch === */
+          .pitch { position: relative; width: 100%; aspect-ratio: 16/10; background: linear-gradient(135deg, var(--pitch-green-dark) 0%, var(--pitch-green-mid) 45%, var(--pitch-green-dark) 100%); border: 1px solid color-mix(in srgb, var(--on-pitch) 18%, transparent); border-radius: 8px; overflow: hidden; }
+          .pitch::before { content: ''; position: absolute; inset: 0; background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--on-pitch) 3.5%, transparent) 0, color-mix(in srgb, var(--on-pitch) 3.5%, transparent) 1px, transparent 1px, transparent 10%); pointer-events: none; }
+          .pl { position: absolute; background: color-mix(in srgb, var(--on-pitch) 32%, transparent); }
+          .pl-half { left: 50%; top: 0; bottom: 0; width: 1.5px; }
+          .pl-top { left: 0; right: 0; top: 0; height: 1.5px; }
+          .pl-bot { left: 0; right: 0; bottom: 0; height: 1.5px; }
+          .pl-left { left: 0; top: 0; bottom: 0; width: 1.5px; }
+          .pl-right { right: 0; top: 0; bottom: 0; width: 1.5px; }
+          .pl-circle { position: absolute; left: 50%; top: 50%; width: 116px; height: 116px; border: 1.5px solid color-mix(in srgb, var(--on-pitch) 35%, transparent); border-radius: 50%; transform: translate(-50%,-50%); }
+          .pl-dot { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; background: color-mix(in srgb, var(--on-pitch) 50%, transparent); border-radius: 50%; transform: translate(-50%,-50%); }
+          .pl-box-t { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 48%; height: 16%; border: 1.5px solid color-mix(in srgb, var(--on-pitch) 30%, transparent); border-top: none; }
+          .pl-box-b { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 48%; height: 16%; border: 1.5px solid color-mix(in srgb, var(--on-pitch) 30%, transparent); border-bottom: none; }
+          .pl-sm-t { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24%; height: 7%; border: 1.5px solid color-mix(in srgb, var(--on-pitch) 28%, transparent); border-top: none; }
+          .pl-sm-b { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 24%; height: 7%; border: 1.5px solid color-mix(in srgb, var(--on-pitch) 28%, transparent); border-bottom: none; }
+          .pdot { position: absolute; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 12px; font-weight: 600; transform: translate(-50%,-50%); border: 1.5px solid color-mix(in srgb, var(--on-pitch-strong) 85%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--background) 25%, transparent); }
+          .pdot.gk { background: color-mix(in srgb, var(--secondary) 92%, transparent); color: var(--background); }
+          .pdot.def { background: color-mix(in srgb, var(--card) 85%, transparent); color: var(--on-media); }
+          .pdot.mid { background: color-mix(in srgb, var(--primary) 82%, transparent); color: var(--on-media); }
+          .pdot.fwd { background: color-mix(in srgb, var(--foreground) 92%, transparent); color: var(--background); }
+
+          /* === Timeline === */
+          .tl-track { position: relative; }
+          .tl-track::before { content: ''; position: absolute; top: 19px; left: 8%; right: 8%; height: 1px; background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%); opacity: 0.6; }
+          .tl-node { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--background); position: relative; z-index: 1; }
+
+          /* === Tech layer === */
+          .tech-row { transition: border-color .2s, background-color .2s; }
+          .tech-row:hover { border-color: var(--secondary); background: color-mix(in srgb, var(--secondary) 4%, transparent); }
+          .tech-connector { width: 1px; height: 14px; background: var(--border); margin: 0 auto; }
+
+          /* === Role / AI cards === */
+          .role-card { transition: border-color .2s, transform .2s; }
+          .role-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+          .ai-card { transition: border-color .2s, transform .2s; }
+          .ai-card:hover { border-color: var(--secondary); transform: translateY(-2px); }
+          .value-card { transition: border-color .2s, transform .2s; }
+          .value-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+
+          /* === CTA glow === */
+          .cta-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 28% 0%, color-mix(in srgb, var(--primary) 20%, transparent) 0%, color-mix(in srgb, var(--primary) 0%, transparent) 55%), radial-gradient(ellipse at 82% 100%, color-mix(in srgb, var(--secondary) 16%, transparent) 0%, color-mix(in srgb, var(--secondary) 0%, transparent) 55%); pointer-events: none; }
+
+          /* === Chips === */
+          .chip { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border); background: color-mix(in srgb, var(--on-media) 2%, transparent); color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
+          .chip-mono { font-family: var(--font-mono); font-size: 11.5px; }
+          .chip-cyan { border-color: color-mix(in srgb, var(--secondary) 38%, transparent); color: var(--secondary); background: color-mix(in srgb, var(--secondary) 6%, transparent); }
+          .chip-red { border-color: color-mix(in srgb, var(--primary) 38%, transparent); color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
+
+          /* === Data badge === */
+          .data-badge { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background: color-mix(in srgb, var(--card) 74%, transparent); border: 1px solid var(--border); }
+
+          /* === Section divider === */
+          .sec { padding-top: 96px; padding-bottom: 96px; }
+          @media (max-width: 768px) { .sec { padding-top: 64px; padding-bottom: 64px; } }
+        </style>
+
+        <!-- 2. 顶部 sticky 胶囊导航 -->
+        <nav class="nav-shell sticky top-0 z-50">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="flex h-16 items-center justify-between gap-4">
+              <a href="#overview" class="flex items-center gap-2 shrink-0">
+                <span class="flex h-8 w-8 items-center justify-center rounded-md" style="background: linear-gradient(135deg, var(--primary), var(--secondary));">
+                  <i data-lucide="activity" class="h-4 w-4" style="color: var(--on-accent);"></i>
+                </span>
+                <span class="font-display text-base font-semibold tracking-tight text-foreground">数智绿茵</span>
+                <span class="hidden sm:inline kicker">FOOTBALL OS</span>
+              </a>
+              <div class="hidden lg:flex items-center gap-1 text-sm">
+                <a href="#overview" class="nav-link px-3 py-2 rounded-md truncate">平台总览</a>
+                <a href="#architecture" class="nav-link px-3 py-2 rounded-md truncate">三端架构</a>
+                <a href="#roles" class="nav-link px-3 py-2 rounded-md truncate">角色工作台</a>
+                <a href="#tactics" class="nav-link px-3 py-2 rounded-md truncate">战术看板</a>
+                <a href="#ai" class="nav-link px-3 py-2 rounded-md truncate">AI 能力</a>
+                <a href="#tech" class="nav-link px-3 py-2 rounded-md truncate">技术架构</a>
+                <a href="#roadmap" class="nav-link px-3 py-2 rounded-md truncate">实施路径</a>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <a href="#trust" class="hidden md:inline-flex h-9 items-center rounded-full px-4 text-sm font-medium text-foreground border border-border hover:border-secondary hover:text-secondary transition">下载方案</a>
+                <a href="#trust" class="inline-flex h-9 items-center rounded-full px-4 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition">预约演示</a>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <!-- 1. Hero 沉浸式开场 -->
+        <section id="overview" class="hero-shell">
+          <img src="../assets/image_0_yi19x4.jpg" alt="夜场足球场数据节点主视觉" class="hero-img">
+          <div class="hero-overlay"></div>
+          <div class="hero-side-overlay"></div>
+          <div class="hero-glow-r"></div>
+          <div class="hero-glow-c"></div>
+          <div class="relative mx-auto max-w-7xl px-6 pt-24 pb-20 lg:pt-32 lg:pb-28">
+            <div class="grid lg:grid-cols-12 gap-10 items-end">
+              <div class="lg:col-span-8">
+                <div class="flex items-center gap-3 mb-6">
+                  <span class="kicker text-primary">Intelligent Football Platform</span>
+                  <span class="h-px w-10" style="background: var(--primary);"></span>
+                  <span class="kicker">v2026 · 客户提案</span>
+                </div>
+                <h1 class="display-h text-foreground font-semibold text-5xl md:text-6xl lg:text-7xl">
+                  让数据学会思考<br>
+                  <span class="text-foreground">数智绿茵</span><span class="text-secondary"> · </span><span class="text-foreground">决胜每一寸场地</span>
+                </h1>
+                <p class="mt-7 max-w-2xl text-base md:text-lg leading-relaxed text-muted-foreground line-clamp-4">
+                  面向现代足球俱乐部的数智化中枢。以统一数据底座打通管理、教练、球员三端，融合九大 AI 智能体能力，把训练负荷、战术选择、伤病预警、对手分析沉淀为可复用的决策资产，让每一场比赛都站在数据的肩膀上。
+                </p>
+                <div class="mt-9 flex flex-wrap items-center gap-3">
+                  <a href="#trust" class="inline-flex h-11 items-center gap-2 rounded-full px-6 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition">
+                    <i data-lucide="calendar-check" class="h-4 w-4"></i>预约演示
+                  </a>
+                  <a href="#trust" class="inline-flex h-11 items-center gap-2 rounded-full px-6 text-sm font-medium text-foreground border border-border hover:border-secondary hover:text-secondary transition">
+                    <i data-lucide="download" class="h-4 w-4"></i>下载方案
+                  </a>
+                  <div class="hidden sm:flex items-center gap-2 pl-3 text-xs text-muted-foreground">
+                    <i data-lucide="shield-check" class="h-4 w-4 text-secondary"></i><span class="truncate">已服务 12+ 职业俱乐部</span>
+                  </div>
+                </div>
+              </div>
+              <div class="lg:col-span-4 flex lg:justify-end">
+                <div class="data-badge rounded-lg p-5 w-full max-w-xs">
+                  <div class="flex items-center justify-between mb-4">
+                    <span class="kicker">Platform Index</span>
+                    <i data-lucide="layers" class="h-4 w-4 text-secondary"></i>
+                  </div>
+                  <div class="space-y-3">
+                    <div class="flex items-baseline justify-between border-b border-border pb-3">
+                      <span class="text-sm text-muted-foreground">AI 能力</span>
+                      <span class="mono text-2xl font-semibold text-secondary">9<span class="text-sm text-muted-foreground ml-1">大</span></span>
+                    </div>
+                    <div class="flex items-baseline justify-between border-b border-border pb-3">
+                      <span class="text-sm text-muted-foreground">角色工作台</span>
+                      <span class="mono text-2xl font-semibold text-foreground">8<span class="text-sm text-muted-foreground ml-1">大</span></span>
+                    </div>
+                    <div class="flex items-baseline justify-between">
+                      <span class="text-sm text-muted-foreground">技术架构</span>
+                      <span class="mono text-2xl font-semibold text-primary">6<span class="text-sm text-muted-foreground ml-1">层</span></span>
+                    </div>
+                  </div>
+                  <div class="mt-4 pt-4 border-t border-border text-[11px] text-muted-foreground mono">3-END · UNIFIED DATA CORE</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. 平台价值主张 -->
+        <section id="value" class="sec">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="max-w-3xl mb-14">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="kicker text-primary">Why Us</span>
+                <span class="h-px w-10" style="background: var(--primary);"></span>
+              </div>
+              <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl">为现代足球俱乐部打造的数智化中枢</h2>
+              <p class="mt-5 text-base text-muted-foreground leading-relaxed line-clamp-3">不再是被动的报表工具，而是贯穿战略、训练、比赛、康复全链路的决策伙伴。三大核心价值，重塑俱乐部运营底座。</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-5">
+              <div class="value-card bg-card border border-border rounded-lg p-7">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-5" style="background: color-mix(in srgb, var(--primary) 8%, transparent);">
+                  <i data-lucide="bar-chart-3" class="h-5 w-5 text-primary"></i>
+                </div>
+                <h3 class="text-foreground font-semibold text-xl mb-3">数据驱动决策</h3>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-4">用统一数据底座替代经验直觉，让每一次首发、换人、训练计划都有据可依。从主席到教练，共享同一套可信指标。</p>
+                <div class="mt-5 flex flex-wrap gap-2">
+                  <span class="chip chip-mono">统一指标</span>
+                  <span class="chip chip-mono">实时回看</span>
+                  <span class="chip chip-mono">归因可溯</span>
+                </div>
+              </div>
+              <div class="value-card bg-card border border-border rounded-lg p-7">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-5" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);">
+                  <i data-lucide="users" class="h-5 w-5 text-secondary"></i>
+                </div>
+                <h3 class="text-foreground font-semibold text-xl mb-3">全角色协同</h3>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-4">主席、总经理、教练、球员、医疗、数据……八种角色同一平台协作，信息零时差流转。指令下发与执行反馈在同一张数据网上闭环。</p>
+                <div class="mt-5 flex flex-wrap gap-2">
+                  <span class="chip chip-mono">三端同步</span>
+                  <span class="chip chip-mono">权限隔离</span>
+                  <span class="chip chip-mono">消息驱动</span>
+                </div>
+              </div>
+              <div class="value-card bg-card border border-border rounded-lg p-7">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-5" style="background: color-mix(in srgb, var(--primary) 8%, transparent);">
+                  <i data-lucide="sparkles" class="h-5 w-5 text-primary"></i>
+                </div>
+                <h3 class="text-foreground font-semibold text-xl mb-3">AI 智能参谋</h3>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-4">九大 AI 智能体覆盖赛前预测、赛中建议、赛后复盘，把专家经验沉淀为可复用能力。模型持续学习俱乐部自身数据，越用越懂你。</p>
+                <div class="mt-5 flex flex-wrap gap-2">
+                  <span class="chip chip-mono">九大智能体</span>
+                  <span class="chip chip-mono">私有模型</span>
+                  <span class="chip chip-mono">闭环学习</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. 三端协同架构 -->
+        <section id="architecture" class="sec" style="background: var(--card);">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="max-w-3xl mb-14">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="kicker text-secondary">Architecture</span>
+                <span class="h-px w-10" style="background: var(--secondary);"></span>
+              </div>
+              <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl">三端协同 · 一体化数据中枢</h2>
+              <p class="mt-5 text-base text-muted-foreground leading-relaxed line-clamp-3">管理端、教练端、球员端三入口共享同一数据中台，采集、计算、决策在同一张数据网上完成，杜绝信息孤岛与口径分歧。</p>
+            </div>
+
+            <div class="arch-wrap">
+              <!-- 三端 -->
+              <div class="grid md:grid-cols-3 gap-5">
+                <div class="bg-background border border-border rounded-lg p-6">
+                  <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center gap-3">
+                      <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="monitor" class="h-5 w-5 text-primary"></i></span>
+                      <div>
+                        <div class="text-foreground font-semibold">管理端 PC</div>
+                        <div class="kicker">Chairman · GM</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-red chip-mono">01</span>
+                  </div>
+                  <ul class="space-y-2.5 text-sm text-muted-foreground">
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>战略仪表盘与 KPI</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>财务与人事全局</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>青训体系与梯队</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>商务运营与合规</li>
+                  </ul>
+                </div>
+                <div class="bg-background border border-border rounded-lg p-6">
+                  <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center gap-3">
+                      <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="tablet" class="h-5 w-5 text-secondary"></i></span>
+                      <div>
+                        <div class="text-foreground font-semibold">教练端 Pad</div>
+                        <div class="kicker">Coach · Assistant</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-cyan chip-mono">02</span>
+                  </div>
+                  <ul class="space-y-2.5 text-sm text-muted-foreground">
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-secondary shrink-0"></i>战术布置与阵型</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-secondary shrink-0"></i>训练计划与负荷</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-secondary shrink-0"></i>实时数据看板</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-secondary shrink-0"></i>视频回看与标注</li>
+                  </ul>
+                </div>
+                <div class="bg-background border border-border rounded-lg p-6">
+                  <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center gap-3">
+                      <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="smartphone" class="h-5 w-5 text-primary"></i></span>
+                      <div>
+                        <div class="text-foreground font-semibold">球员端 App</div>
+                        <div class="kicker">Player</div>
+                      </div>
+                    </div>
+                    <span class="chip chip-red chip-mono">03</span>
+                  </div>
+                  <ul class="space-y-2.5 text-sm text-muted-foreground">
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>个人数据与雷达</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>训练任务执行</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>健康自报与反馈</li>
+                    <li class="flex items-center gap-2 truncate"><i data-lucide="circle-dot" class="h-3.5 w-3.5 text-primary shrink-0"></i>战术指令接收</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- 连接线 -->
+              <div class="hidden md:flex justify-center my-2">
+                <div class="flex flex-col items-center">
+                  <div class="h-8 w-px" style="background: linear-gradient(180deg, var(--primary), var(--secondary)); opacity:.55;"></div>
+                  <div class="arch-node-dot" style="background: var(--secondary);"></div>
+                </div>
+              </div>
+
+              <!-- 中央数据中台 -->
+              <div class="bg-background border rounded-lg p-7" style="border-color: color-mix(in srgb, var(--secondary) 35%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 4%, transparent) 0%, color-mix(in srgb, var(--secondary) 5%, transparent) 100%);">
+                <div class="grid md:grid-cols-12 gap-6 items-center">
+                  <div class="md:col-span-5">
+                    <div class="flex items-center gap-3 mb-3">
+                      <span class="flex h-11 w-11 items-center justify-center rounded-md border border-border bg-background"><i data-lucide="database" class="h-5 w-5 text-secondary"></i></span>
+                      <div>
+                        <div class="text-foreground font-semibold text-lg">中央数据中台</div>
+                        <div class="kicker">Unified Data Core</div>
+                      </div>
+                    </div>
+                    <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">三端数据在此汇聚、清洗、建模，向下游 AI 引擎与应用层统一供给。一套指标口径，一份可信数据资产。</p>
+                  </div>
+                  <div class="md:col-span-7 grid grid-cols-2 gap-3">
+                    <div class="border border-border rounded-md p-4 bg-card">
+                      <div class="kicker mb-2">数据湖</div>
+                      <div class="mono text-2xl font-semibold text-foreground">12<span class="text-sm text-muted-foreground ml-1">域</span></div>
+                      <div class="text-xs text-muted-foreground mt-1 truncate">赛事 / 训练 / 体能 / 医疗</div>
+                    </div>
+                    <div class="border border-border rounded-md p-4 bg-card">
+                      <div class="kicker mb-2 text-secondary">AI 引擎</div>
+                      <div class="mono text-2xl font-semibold text-secondary">9<span class="text-sm text-muted-foreground ml-1">模型</span></div>
+                      <div class="text-xs text-muted-foreground mt-1 truncate">预测 / 推荐 / 归因 / 预警</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. 八大角色工作台 -->
+        <section id="roles" class="sec">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="max-w-3xl mb-14">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="kicker text-primary">Roles</span>
+                <span class="h-px w-10" style="background: var(--primary);"></span>
+              </div>
+              <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl">八大角色 · 各司其职</h2>
+              <p class="mt-5 text-base text-muted-foreground leading-relaxed line-clamp-3">每个角色拥有专属工作台，看见自己关心的数据，执行自己负责的决策。权限隔离，信息贯通。</p>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- 1 主席 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="crown" class="h-5 w-5 text-primary"></i></span>
+                  <span class="chip chip-mono">01</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">俱乐部主席</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">战略决策与资源统筹，把控俱乐部全局方向。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">战略仪表盘</span>
+                  <span class="chip chip-mono">投资回报</span>
+                  <span class="chip chip-mono">财务健康</span>
+                </div>
+              </div>
+              <!-- 2 总经理 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="briefcase" class="h-5 w-5 text-secondary"></i></span>
+                  <span class="chip chip-mono">02</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">总经理</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">运营全局与商业落地，确保预算与执行对齐。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">预算执行</span>
+                  <span class="chip chip-mono">商务合作</span>
+                  <span class="chip chip-mono">合规审计</span>
+                </div>
+              </div>
+              <!-- 3 主教练 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="clipboard-list" class="h-5 w-5 text-primary"></i></span>
+                  <span class="chip chip-mono">03</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">主教练</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">战术与比赛决策，掌控阵容与临场调度。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">阵容推荐</span>
+                  <span class="chip chip-mono">战术看板</span>
+                  <span class="chip chip-mono">赛后复盘</span>
+                </div>
+              </div>
+              <!-- 4 助理教练 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="list-checks" class="h-5 w-5 text-secondary"></i></span>
+                  <span class="chip chip-mono">04</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">助理教练</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">训练执行与协助，落实计划并跟踪球员状态。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">训练计划</span>
+                  <span class="chip chip-mono">球员状态</span>
+                  <span class="chip chip-mono">视频分析</span>
+                </div>
+              </div>
+              <!-- 5 球员 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="user" class="h-5 w-5 text-primary"></i></span>
+                  <span class="chip chip-mono">05</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">球员</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">个人表现与执行，专注自身状态与任务。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">个人数据</span>
+                  <span class="chip chip-mono">训练任务</span>
+                  <span class="chip chip-mono">健康反馈</span>
+                </div>
+              </div>
+              <!-- 6 青训主管 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="sprout" class="h-5 w-5 text-secondary"></i></span>
+                  <span class="chip chip-mono">06</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">青训主管</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">梯队建设与选拔，追踪年轻球员成长曲线。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">青训档案</span>
+                  <span class="chip chip-mono">成长曲线</span>
+                  <span class="chip chip-mono">选拔评估</span>
+                </div>
+              </div>
+              <!-- 7 医疗康复 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="heart-pulse" class="h-5 w-5 text-primary"></i></span>
+                  <span class="chip chip-mono">07</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">医疗康复</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">伤病管理与康复，保障球员健康与出场可用。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">伤病预警</span>
+                  <span class="chip chip-mono">康复计划</span>
+                  <span class="chip chip-mono">负荷监控</span>
+                </div>
+              </div>
+              <!-- 8 数据分析 -->
+              <div class="role-card bg-card border border-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="chart-line" class="h-5 w-5 text-secondary"></i></span>
+                  <span class="chip chip-mono">08</span>
+                </div>
+                <h3 class="text-foreground font-semibold mb-1.5 truncate">数据分析</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">数据洞察与建模，把数据转化为可执行建议。</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="chip chip-mono">数据归因</span>
+                  <span class="chip chip-mono">对手分析</span>
+                  <span class="chip chip-mono">模型建设</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. 沉浸式战术看板预览 -->
+        <section id="tactics" class="sec" style="background: var(--card);">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="max-w-3xl mb-14">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="kicker text-primary">Tactics</span>
+                <span class="h-px w-10" style="background: var(--primary);"></span>
+              </div>
+              <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl">所见即所战 · 沉浸式战术看板</h2>
+              <p class="mt-5 text-base text-muted-foreground leading-relaxed line-clamp-3">教练端核心工作台。可视化阵型布置、实时球员评分与 AI 战术建议同屏呈现，临场决策一屏即达。</p>
+            </div>
+
+            <div class="grid lg:grid-cols-12 gap-5">
+              <!-- 球场 -->
+              <div class="lg:col-span-8">
+                <div class="bg-background border border-border rounded-lg p-5">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="layout-grid" class="h-4 w-4 text-secondary"></i>
+                      <span class="text-sm text-foreground font-medium">阵型看板 · 4-3-3</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="chip chip-cyan chip-mono">LIVE</span>
+                      <span class="chip chip-mono">主场</span>
+                    </div>
+                  </div>
+                  <div class="pitch">
+                    <div class="pl pl-top"></div><div class="pl pl-bot"></div><div class="pl pl-left"></div><div class="pl pl-right"></div>
+                    <div class="pl pl-half"></div>
+                    <div class="pl-circle"></div><div class="pl-dot"></div>
+                    <div class="pl-box-t"></div><div class="pl-box-b"></div>
+                    <div class="pl-sm-t"></div><div class="pl-sm-b"></div>
+                    <!-- 前锋 (上) -->
+                    <div class="pdot fwd" style="left:30%; top:14%;">7</div>
+                    <div class="pdot fwd" style="left:50%; top:10%;">9</div>
+                    <div class="pdot fwd" style="left:70%; top:14%;">11</div>
+                    <!-- 中场 -->
+                    <div class="pdot mid" style="left:32%; top:38%;">6</div>
+                    <div class="pdot mid" style="left:50%; top:42%;">8</div>
+                    <div class="pdot mid" style="left:68%; top:38%;">10</div>
+                    <!-- 后卫 -->
+                    <div class="pdot def" style="left:18%; top:66%;">2</div>
+                    <div class="pdot def" style="left:39%; top:69%;">3</div>
+                    <div class="pdot def" style="left:61%; top:69%;">4</div>
+                    <div class="pdot def" style="left:82%; top:66%;">5</div>
+                    <!-- 门将 -->
+                    <div class="pdot gk" style="left:50%; top:90%;">1</div>
+                  </div>
+                  <div class="mt-4 grid grid-cols-3 gap-3 text-xs">
+                    <div class="flex items-center gap-2 text-muted-foreground"><span class="w-2.5 h-2.5 rounded-full" style="background: var(--secondary);"></span><span class="truncate">门将</span></div>
+                    <div class="flex items-center gap-2 text-muted-foreground"><span class="w-2.5 h-2.5 rounded-full" style="background: color-mix(in srgb, var(--card) 90%, transparent); border:1px solid var(--on-media);"></span><span class="truncate">后卫</span></div>
+                    <div class="flex items-center gap-2 text-muted-foreground"><span class="w-2.5 h-2.5 rounded-full" style="background: var(--primary);"></span><span class="truncate">中场 / 前锋</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 数据面板 -->
+              <div class="lg:col-span-4 flex flex-col gap-5">
+                <div class="bg-background border border-border rounded-lg p-5">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="kicker">阵型</span>
+                    <i data-lucide="formation" class="h-4 w-4 text-secondary"></i>
+                  </div>
+                  <div class="mono text-3xl font-semibold text-foreground">4-3-3</div>
+                  <div class="text-xs text-muted-foreground mt-1 truncate">高位压迫 · 两翼齐飞</div>
+                  <div class="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-2 text-center">
+                    <div><div class="mono text-sm text-foreground">4</div><div class="text-[10px] text-muted-foreground truncate">后卫</div></div>
+                    <div><div class="mono text-sm text-primary">3</div><div class="text-[10px] text-muted-foreground truncate">中场</div></div>
+                    <div><div class="mono text-sm text-secondary">3</div><div class="text-[10px] text-muted-foreground truncate">前锋</div></div>
+                  </div>
+                </div>
+                <div class="bg-background border border-border rounded-lg p-5">
+                  <div class="flex items-center justify-between mb-4">
+                    <span class="kicker">关键球员评分</span>
+                    <i data-lucide="star" class="h-4 w-4 text-primary"></i>
+                  </div>
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2 min-w-0"><span class="mono text-xs text-muted-foreground w-6 shrink-0">9</span><span class="text-sm text-foreground truncate">中锋</span></div>
+                      <span class="mono text-sm font-semibold text-primary">8.6</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2 min-w-0"><span class="mono text-xs text-muted-foreground w-6 shrink-0">10</span><span class="text-sm text-foreground truncate">前腰</span></div>
+                      <span class="mono text-sm font-semibold text-foreground">8.1</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2 min-w-0"><span class="mono text-xs text-muted-foreground w-6 shrink-0">8</span><span class="text-sm text-foreground truncate">中卫</span></div>
+                      <span class="mono text-sm font-semibold text-foreground">7.8</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2 min-w-0"><span class="mono text-xs text-muted-foreground w-6 shrink-0">7</span><span class="text-sm text-foreground truncate">右边锋</span></div>
+                      <span class="mono text-sm font-semibold text-secondary">7.4</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-background border rounded-lg p-5" style="border-color: color-mix(in srgb, var(--secondary) 35%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--secondary) 5%, transparent) 0%, color-mix(in srgb, var(--secondary) 0%, transparent) 100%);">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="kicker text-secondary">AI 建议</span>
+                    <i data-lucide="sparkles" class="h-4 w-4 text-secondary"></i>
+                  </div>
+                  <p class="text-sm text-foreground leading-relaxed line-clamp-4">建议 65 分钟用 11 号换下体能下降的 7 号，保持右路冲击力；中场 8 号回撤加强防守覆盖。</p>
+                  <div class="mt-4 flex items-center gap-2">
+                    <span class="chip chip-cyan chip-mono">换人</span>
+                    <span class="chip chip-cyan chip-mono">阵型微调</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. AI 智能体九大能力 -->
+        <section id="ai" class="sec">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="max-w-3xl mb-14">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="kicker text-secondary">AI Agent</span>
+                <span class="h-px w-10" style="background: var(--secondary);"></span>
+              </div>
+              <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl">AI 参谋 · 九大智能能力</h2>
+              <p class="mt-5 text-base text-muted-foreground leading-relaxed line-clamp-3">九大智能体覆盖赛前、赛中、赛后全周期，把专家经验沉淀为可复用模型。青色信号代表数据与智能在持续运转。</p>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="trophy" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">01</span><h3 class="text-foreground font-semibold">赛事预测</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">基于历史交锋与实时状态，预测比赛走势与胜负概率。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="users-round" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">02</span><h3 class="text-foreground font-semibold">阵容推荐</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">综合对手、体能、伤停，给出最优首发与替补方案。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="heart-pulse" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">03</span><h3 class="text-foreground font-semibold">伤病预警</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">监控训练负荷与生理指标，提前识别伤病风险。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="activity" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">04</span><h3 class="text-foreground font-semibold">训练负荷</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">动态调整训练强度，平衡竞技状态与疲劳恢复。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="search" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">05</span><h3 class="text-foreground font-semibold">对手分析</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">解构对手战术习惯与关键球员，输出针对性策略。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="clipboard-list" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">06</span><h3 class="text-foreground font-semibold">战术建议</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">实时给出换人、阵型调整、定位球方案建议。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="user-check" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">07</span><h3 class="text-foreground font-semibold">球员评估</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">多维雷达评估球员能力与潜力，辅助转会决策。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="git-branch" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">08</span><h3 class="text-foreground font-semibold">数据归因</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">自动归因比赛胜负关键因素，定位改进方向。</p>
+              </div>
+              <div class="ai-card bg-card border border-border rounded-lg p-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-md border border-border mb-4" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="file-text" class="h-5 w-5 text-secondary"></i></div>
+                <div class="flex items-center gap-2 mb-2"><span class="chip chip-cyan chip-mono">09</span><h3 class="text-foreground font-semibold">复盘报告</h3></div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3">赛后自动生成结构化复盘报告与行动清单。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. 六层技术架构 -->
+        <section id="tech" class="sec" style="background: var(--card);">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="max-w-3xl mb-14">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="kicker text-secondary">Tech Stack</span>
+                <span class="h-px w-10" style="background: var(--secondary);"></span>
+              </div>
+              <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl">六层技术架构 · 从感知到决策</h2>
+              <p class="mt-5 text-base text-muted-foreground leading-relaxed line-clamp-3">自下而上的六层架构，从球场边的传感器到顶层的决策智能体，每一层都可独立演进、可被替换。</p>
+            </div>
+
+            <div class="space-y-0">
+              <!-- L1 感知层 -->
+              <div class="tech-row bg-background border border-border rounded-lg p-5">
+                <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                  <div class="md:w-56 shrink-0 flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="radio" class="h-5 w-5 text-primary"></i></span>
+                    <div>
+                      <div class="kicker">Layer 01</div>
+                      <div class="text-foreground font-semibold">感知层</div>
+                    </div>
+                  </div>
+                  <div class="flex-1 flex flex-wrap gap-2">
+                    <span class="chip chip-mono">IoT 传感器</span>
+                    <span class="chip chip-mono">可穿戴设备</span>
+                    <span class="chip chip-mono">视频采集</span>
+                    <span class="chip chip-mono">GPS 追踪</span>
+                    <span class="chip chip-mono">生理指标</span>
+                  </div>
+                </div>
+              </div>
+              <div class="tech-connector"></div>
+              <!-- L2 数据层 -->
+              <div class="tech-row bg-background border border-border rounded-lg p-5">
+                <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                  <div class="md:w-56 shrink-0 flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="database" class="h-5 w-5 text-secondary"></i></span>
+                    <div>
+                      <div class="kicker">Layer 02</div>
+                      <div class="text-foreground font-semibold">数据层</div>
+                    </div>
+                  </div>
+                  <div class="flex-1 flex flex-wrap gap-2">
+                    <span class="chip chip-mono">数据湖</span>
+                    <span class="chip chip-mono">ETL 管道</span>
+                    <span class="chip chip-mono">实时流</span>
+                    <span class="chip chip-mono">数据仓库</span>
+                  </div>
+                </div>
+              </div>
+              <div class="tech-connector"></div>
+              <!-- L3 平台层 -->
+              <div class="tech-row bg-background border border-border rounded-lg p-5">
+                <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                  <div class="md:w-56 shrink-0 flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="layers" class="h-5 w-5 text-primary"></i></span>
+                    <div>
+                      <div class="kicker">Layer 03</div>
+                      <div class="text-foreground font-semibold">平台层</div>
+                    </div>
+                  </div>
+                  <div class="flex-1 flex flex-wrap gap-2">
+                    <span class="chip chip-mono">微服务</span>
+                    <span class="chip chip-mono">API 网关</span>
+                    <span class="chip chip-mono">权限中心</span>
+                    <span class="chip chip-mono">消息队列</span>
+                  </div>
+                </div>
+              </div>
+              <div class="tech-connector"></div>
+              <!-- L4 模型层 -->
+              <div class="tech-row bg-background border border-border rounded-lg p-5">
+                <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                  <div class="md:w-56 shrink-0 flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--secondary) 8%, transparent);"><i data-lucide="brain-circuit" class="h-5 w-5 text-secondary"></i></span>
+                    <div>
+                      <div class="kicker">Layer 04</div>
+                      <div class="text-foreground font-semibold">模型层</div>
+                    </div>
+                  </div>
+                  <div class="flex-1 flex flex-wrap gap-2">
+                    <span class="chip chip-mono">模型训练</span>
+                    <span class="chip chip-mono">特征仓库</span>
+                    <span class="chip chip-mono">模型注册</span>
+                    <span class="chip chip-mono">推理服务</span>
+                  </div>
+                </div>
+              </div>
+              <div class="tech-connector"></div>
+              <!-- L5 应用层 -->
+              <div class="tech-row bg-background border border-border rounded-lg p-5">
+                <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                  <div class="md:w-56 shrink-0 flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border" style="background: color-mix(in srgb, var(--primary) 8%, transparent);"><i data-lucide="layout-dashboard" class="h-5 w-5 text-primary"></i></span>
+                    <div>
+                      <div class="kicker">Layer 05</div>
+                      <div class="text-foreground font-semibold">应用层</div>
+                    </div>
+                  </div>
+                  <div class="flex-1 flex flex-wrap gap-2">
+                    <span class="chip chip-mono">工作台</span>
+                    <span class="chip chip-mono">仪表盘</span>
+                    <span class="chip chip-mono">报表</span>
+                    <span class="chip chip-mono">告警</span>
+                  </div>
+                </div>
+              </div>
+              <div class="tech-connector"></div>
+              <!-- L6 决策层 -->
+              <div class="tech-row bg-background border rounded-lg p-5" style="border-color: color-mix(in srgb, var(--secondary) 35%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--secondary) 4%, transparent) 0%, color-mix(in srgb, var(--secondary) 0%, transparent) 100%);">
+                <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                  <div class="md:w-56 shrink-0 flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-background"><i data-lucide="lightbulb" class="h-5 w-5 text-secondary"></i></span>
+                    <div>
+                      <div class="kicker text-secondary">Layer 06</div>
+                      <div class="text-foreground font-semibold">决策层</div>
+                    </div>
+                  </div>
+                  <div class="flex-1 flex flex-wrap gap-2">
+                    <span class="chip chip-cyan chip-mono">智能体</span>
+                    <span class="chip chip-cyan chip-mono">推荐引擎</span>
+                    <span class="chip chip-cyan chip-mono">预测引擎</span>
+                    <span class="chip chip-cyan chip-mono">自动驾驶</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. 三期实施路径 -->
+        <section id="roadmap" class="sec">
+          <div class="mx-auto max-w-7xl px-6">
+            <div class="max-w-3xl mb-14">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="kicker text-primary">Roadmap</span>
+                <span class="h-px w-10" style="background: var(--primary);"></span>
+              </div>
+              <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl">三期实施 · 渐进式数智化演进</h2>
+              <p class="mt-5 text-base text-muted-foreground leading-relaxed line-clamp-3">从看得见数据，到用得上智能，再到能闭环决策。十二个月内分三阶段落地，每阶段都有可验证的交付物与指标。</p>
+            </div>
+
+            <div class="tl-track grid md:grid-cols-3 gap-6 pt-2">
+              <!-- Phase 1 -->
+              <div>
+                <div class="flex items-center gap-3 mb-5">
+                  <div class="tl-node" style="background: var(--primary);"></div>
+                  <div>
+                    <div class="kicker text-primary">Phase 01</div>
+                    <div class="mono text-sm text-foreground font-semibold">0 - 3 月</div>
+                  </div>
+                </div>
+                <div class="bg-card border border-border rounded-lg p-6">
+                  <div class="mb-3"><span class="chip chip-red chip-mono">基础数字化</span></div>
+                  <h3 class="text-foreground font-semibold text-lg mb-2">数据看得见</h3>
+                  <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-4">完成数据采集接入与角色工作台 MVP，打通单端试运行，建立统一指标口径。</p>
+                  <div class="space-y-2 mb-5">
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-primary shrink-0"></i><span class="truncate">数据采集与接入</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-primary shrink-0"></i><span class="truncate">角色工作台 MVP</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-primary shrink-0"></i><span class="truncate">单端试运行</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-primary shrink-0"></i><span class="truncate">指标口径统一</span></div>
+                  </div>
+                  <div class="pt-4 border-t border-border">
+                    <div class="kicker mb-1">关键指标</div>
+                    <div class="flex items-baseline gap-2"><span class="mono text-2xl font-semibold text-primary">≥80%</span><span class="text-xs text-muted-foreground truncate">数据覆盖率</span></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Phase 2 -->
+              <div>
+                <div class="flex items-center gap-3 mb-5">
+                  <div class="tl-node" style="background: linear-gradient(135deg, var(--primary), var(--secondary));"></div>
+                  <div>
+                    <div class="kicker">Phase 02</div>
+                    <div class="mono text-sm text-foreground font-semibold">3 - 6 月</div>
+                  </div>
+                </div>
+                <div class="bg-card border border-border rounded-lg p-6">
+                  <div class="mb-3"><span class="chip chip-mono">智能化</span></div>
+                  <h3 class="text-foreground font-semibold text-lg mb-2">数据用得上</h3>
+                  <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-4">AI 能力分批上线，三端协同打通，战术看板进入日常使用，教练决策开始有据可依。</p>
+                  <div class="space-y-2 mb-5">
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">AI 能力上线</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">三端协同</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">战术看板</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">对手分析库</span></div>
+                  </div>
+                  <div class="pt-4 border-t border-border">
+                    <div class="kicker mb-1">关键指标</div>
+                    <div class="flex items-baseline gap-2"><span class="mono text-2xl font-semibold text-secondary">≥60%</span><span class="text-xs text-muted-foreground truncate">AI 建议采纳率</span></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Phase 3 -->
+              <div>
+                <div class="flex items-center gap-3 mb-5">
+                  <div class="tl-node" style="background: var(--secondary);"></div>
+                  <div>
+                    <div class="kicker text-secondary">Phase 03</div>
+                    <div class="mono text-sm text-foreground font-semibold">6 - 12 月</div>
+                  </div>
+                </div>
+                <div class="bg-card border rounded-lg p-6" style="border-color: color-mix(in srgb, var(--secondary) 35%, transparent);">
+                  <div class="mb-3"><span class="chip chip-cyan chip-mono">决策闭环</span></div>
+                  <h3 class="text-foreground font-semibold text-lg mb-2">数据能决策</h3>
+                  <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-4">决策智能体上线，全链路归因与自动化复盘跑通，从感知到决策形成完整闭环。</p>
+                  <div class="space-y-2 mb-5">
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">决策智能体</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">全链路归因</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">自动化复盘</span></div>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground"><i data-lucide="check" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">私有模型沉淀</span></div>
+                  </div>
+                  <div class="pt-4 border-t border-border">
+                    <div class="kicker mb-1">关键指标</div>
+                    <div class="flex items-baseline gap-2"><span class="mono text-2xl font-semibold text-secondary">≤5<span class="text-sm text-muted-foreground ml-1">分钟</span></span><span class="text-xs text-muted-foreground truncate">决策响应</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 10. 客户证言 + CTA 收尾 -->
+        <section id="trust" class="sec">
+          <div class="mx-auto max-w-7xl px-6">
+            <!-- 证言 -->
+            <div class="max-w-4xl mx-auto mb-20">
+              <div class="flex items-center gap-3 mb-6 justify-center">
+                <span class="h-px w-10" style="background: var(--secondary);"></span>
+                <span class="kicker text-secondary">Trust</span>
+                <span class="h-px w-10" style="background: var(--secondary);"></span>
+              </div>
+              <blockquote class="text-center">
+                <i data-lucide="quote" class="h-8 w-8 text-primary mx-auto mb-6"></i>
+                <p class="display-h text-foreground font-semibold text-2xl md:text-3xl leading-relaxed" style="text-wrap: balance;">
+                  数智绿茵让我们第一次真正做到了<span class="text-primary">用数据说话</span>。从训练负荷到战术选择，每一个决定都有依据，每一个球员都看得见自己的成长。
+                </p>
+                <footer class="mt-7 flex items-center justify-center gap-3">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card mono text-sm text-foreground">李</span>
+                  <div class="text-left">
+                    <div class="text-sm text-foreground font-medium">李指导</div>
+                    <div class="text-xs text-muted-foreground truncate">某中超俱乐部 · 技术总监</div>
+                  </div>
+                </footer>
+              </blockquote>
+            </div>
+
+            <!-- CTA -->
+            <div class="relative overflow-hidden rounded-lg border border-border bg-card">
+              <div class="cta-glow"></div>
+              <div class="relative px-8 py-14 md:px-14 md:py-20 text-center">
+                <div class="flex items-center gap-3 mb-5 justify-center">
+                  <span class="kicker text-primary">Get Started</span>
+                  <span class="h-px w-10" style="background: var(--primary);"></span>
+                </div>
+                <h2 class="display-h text-foreground font-semibold text-4xl md:text-5xl max-w-3xl mx-auto">让数据为你的俱乐部赢得下一场</h2>
+                <p class="mt-5 max-w-2xl mx-auto text-base text-muted-foreground leading-relaxed line-clamp-3">预约一次专属演示，我们将根据你的俱乐部现状，定制三阶段演进路径与首批 AI 能力清单。</p>
+                <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+                  <a href="#" class="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition">
+                    <i data-lucide="calendar-check" class="h-4 w-4"></i>预约演示
+                  </a>
+                  <a href="#" class="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-medium border border-border bg-secondary hover:opacity-90 transition" style="color: var(--on-accent);">
+                    <i data-lucide="file-down" class="h-4 w-4"></i>获取方案
+                  </a>
+                </div>
+                <div class="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+                  <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="h-3.5 w-3.5 text-secondary"></i>私有化部署</span>
+                  <span class="flex items-center gap-1.5"><i data-lucide="lock" class="h-3.5 w-3.5 text-secondary"></i>数据本地存储</span>
+                  <span class="flex items-center gap-1.5"><i data-lucide="headphones" class="h-3.5 w-3.5 text-secondary"></i>专属交付团队</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-border" style="background: var(--card);">
+          <div class="mx-auto max-w-7xl px-6 py-12">
+            <div class="grid md:grid-cols-12 gap-8">
+              <div class="md:col-span-5">
+                <div class="flex items-center gap-2 mb-4">
+                  <span class="flex h-8 w-8 items-center justify-center rounded-md" style="background: linear-gradient(135deg, var(--primary), var(--secondary));">
+                    <i data-lucide="activity" class="h-4 w-4" style="color: var(--on-accent);"></i>
+                  </span>
+                  <span class="font-display text-base font-semibold tracking-tight text-foreground">数智绿茵</span>
+                </div>
+                <p class="text-sm text-muted-foreground leading-relaxed line-clamp-3 max-w-sm">面向现代足球俱乐部的数智化管理平台。三端协同 · 九大 AI 能力 · 六层技术架构，让数据学会思考。</p>
+                <p class="mt-5 text-xs text-muted-foreground mono">© 2026 数智绿茵 · FOOTBALL OS</p>
+              </div>
+              <div class="md:col-span-4">
+                <div class="kicker mb-4">快速链接</div>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <a href="#overview" class="text-muted-foreground hover:text-foreground transition truncate">平台总览</a>
+                  <a href="#architecture" class="text-muted-foreground hover:text-foreground transition truncate">三端架构</a>
+                  <a href="#roles" class="text-muted-foreground hover:text-foreground transition truncate">角色工作台</a>
+                  <a href="#tactics" class="text-muted-foreground hover:text-foreground transition truncate">战术看板</a>
+                  <a href="#ai" class="text-muted-foreground hover:text-foreground transition truncate">AI 能力</a>
+                  <a href="#tech" class="text-muted-foreground hover:text-foreground transition truncate">技术架构</a>
+                  <a href="#roadmap" class="text-muted-foreground hover:text-foreground transition truncate">实施路径</a>
+                  <a href="#trust" class="text-muted-foreground hover:text-foreground transition truncate">预约演示</a>
+                </div>
+              </div>
+              <div class="md:col-span-3">
+                <div class="kicker mb-4">联系方式</div>
+                <div class="space-y-2.5 text-sm text-muted-foreground">
+                  <div class="flex items-center gap-2"><i data-lucide="mail" class="h-4 w-4 text-secondary shrink-0"></i><span class="mono truncate">contact@football-os.cn</span></div>
+                  <div class="flex items-center gap-2"><i data-lucide="phone" class="h-4 w-4 text-secondary shrink-0"></i><span class="mono truncate">400-888-2026</span></div>
+                  <div class="flex items-center gap-2"><i data-lucide="map-pin" class="h-4 w-4 text-secondary shrink-0"></i><span class="truncate">北京 · 上海</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span class="truncate">本方案为客户提案展示，数据均为示意。</span>
+              <div class="flex items-center gap-4">
+                <a href="#" class="hover:text-foreground transition truncate">隐私政策</a>
+                <a href="#" class="hover:text-foreground transition truncate">服务条款</a>
+              </div>
+            </div>
+          </div>
+        </footer>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

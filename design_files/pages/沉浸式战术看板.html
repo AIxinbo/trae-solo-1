@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沉浸式战术看板</title>
+    <style id="theme-vars">
+/* @dark-only */
+/* TikTok color and type tokens */
+/* Source: structured-spec */
+
+:root {
+
+  /* solo-design consumption aliases: explicit prefix for fill-html-head.mjs */
+  --tk-background: var(--background, #ffffff);
+  --tk-foreground: var(--foreground, #0f172a);
+  --tk-card: var(--card, var(--background));
+  --tk-card-foreground: var(--card-foreground, var(--foreground));
+  --tk-popover: var(--popover, var(--card));
+  --tk-popover-foreground: var(--popover-foreground, var(--card-foreground, var(--foreground)));
+  --tk-primary: var(--primary, #111827);
+  --tk-primary-foreground: var(--primary-foreground, #ffffff);
+  --tk-secondary: var(--secondary, var(--muted, var(--card)));
+  --tk-secondary-foreground: var(--secondary-foreground, var(--foreground));
+  --tk-muted: var(--muted, var(--card));
+  --tk-muted-foreground: var(--muted-foreground, var(--foreground));
+  --tk-accent: var(--accent, var(--secondary, var(--muted, var(--card))));
+  --tk-accent-foreground: var(--accent-foreground, var(--foreground));
+  --tk-destructive: var(--destructive, #ef4444);
+  --tk-destructive-foreground: var(--destructive-foreground, #ffffff);
+  --tk-border: var(--border, currentColor);
+  --tk-input: var(--input, var(--border));
+  --tk-ring: var(--ring, var(--primary));
+  --tk-chart-1: var(--chart-1, var(--primary));
+  --tk-chart-2: var(--chart-2, var(--secondary, var(--primary)));
+  --tk-chart-3: var(--chart-3, var(--accent, var(--primary)));
+  --tk-chart-4: var(--chart-4, var(--muted-foreground, var(--foreground)));
+  --tk-chart-5: var(--chart-5, var(--foreground));
+  --tk-sidebar: var(--sidebar, var(--background));
+  --tk-sidebar-foreground: var(--sidebar-foreground, var(--foreground));
+  --tk-sidebar-primary: var(--sidebar-primary, var(--primary));
+  --tk-sidebar-primary-foreground: var(--sidebar-primary-foreground, var(--primary-foreground));
+  --tk-sidebar-accent: var(--sidebar-accent, var(--accent, var(--muted, var(--card))));
+  --tk-sidebar-accent-foreground: var(--sidebar-accent-foreground, var(--accent-foreground, var(--foreground)));
+
+  /* solo-design radius semantic aliases (mirror --tk-* color alias pattern; required by fill-html-head.mjs --prefix=tk) */
+  --tk-radius-sm: var(--radius-sm);
+  --tk-radius-md: var(--radius-md);
+  --tk-radius-lg: var(--radius-lg);
+  --tk-radius-xl: var(--radius-xl);
+
+/* Source: structured-spec */
+  /* Brand colors */
+  /* --tk-red: #FE2C55;
+  --tk-cyan: #25F4EE;
+  --tk-black: #161823;
+  --tk-white: #FFFFFF; */
+
+  /* tk-red scale · 默认 --tk-red-500 = #FE2C55 */
+  --tk-red-100: #FFE9EE;
+  --tk-red-200: #FFC9D5;
+  --tk-red-300: #FFA0B5;
+  --tk-red-400: #FF6485;
+  --tk-red-500: #FE2C55;
+  --tk-red-600: #E61E45;
+  --tk-red-700: #C01338;
+  --tk-red-800: #990C2B;
+  --tk-red-900: #6B061D;
+  --tk-red-1000: #3D0210;
+
+  /* tk-cyan scale · 默认 --tk-cyan-400 = #25F4EE */
+  --tk-cyan-100: #E3FEFD;
+  --tk-cyan-200: #BAFCFA;
+  --tk-cyan-300: #7CF8F4;
+  --tk-cyan-400: #25F4EE;
+  --tk-cyan-500: #14D6D0;
+  --tk-cyan-600: #0FB3AE;
+  --tk-cyan-700: #0C8F8B;
+  --tk-cyan-800: #086B68;
+  --tk-cyan-900: #054745;
+  --tk-cyan-1000: #022322;
+
+  /* tk-black scale · 默认 --tk-black-1000 = #161823 */
+  --tk-black-100: #EBEBED;
+  --tk-black-200: #D2D3D7;
+  --tk-black-300: #ABACB4;
+  --tk-black-400: #84868F;
+  --tk-black-500: #5D5F6B;
+  --tk-black-600: #44454F;
+  --tk-black-700: #313340;
+  --tk-black-800: #232533;
+  --tk-black-900: #1B1D29;
+  --tk-black-1000: #161823;
+
+  /* tk-white scale · 默认 --tk-white-100 = #FFFFFF */
+  --tk-white-100: #FFFFFF;
+  --tk-white-200: #FAFAFB;
+  --tk-white-300: #F2F2F4;
+  --tk-white-400: #E8E8EC;
+  --tk-white-500: #DCDCE2;
+  --tk-white-600: #C9C9D1;
+  --tk-white-700: #ABABB5;
+  --tk-white-800: #87878F;
+  --tk-white-900: #5E5E66;
+  --tk-white-1000: #36363B;
+
+  /* Brand · 品牌强调色（红主青辅，小面积高识别） */
+  --primary: #FE2C55;
+  --secondary: #25F4EE;
+
+  /* Surface · 表面层级 */
+  --background: #0B0B10;
+  --card: #161823;
+  --card-elevated: #1C1E2A;
+  --video-bg: #16161C;
+
+  /* Content · 前景内容（on-media/on-accent 为深底或强调底上的固定前景） */
+  --foreground: #F5F5F7;
+  --muted-foreground: #AEB2C0;
+  --on-media: #FFFFFF;
+  --on-accent: #161823;
+
+  /* Border · 分隔线 */
+  --border: #3A3D52;
+
+  /* Radius · 克制、偏利落的圆角语言 */
+  /* shell 仅用于 UI Kit 展示外壳；大多数真实产品容器以 sm / md / lg 为主 */
+  --radius-xs: 2px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-shell: 32px;
+  --radius-pill: 999px;
+
+  /* Success · 成功状态 */
+  --success: #10B981;
+  --success-bg: #0E2A22;
+  --success-fg: #34D399;
+
+  /* Error · 错误状态 */
+  --destructive: #E5484D;
+  --error-bg: #2E1416;
+  --error-fg: #FF6485;
+
+  /* Type families */
+  --font-display: Inter, "TikTok Display", ui-sans-serif, sans-serif;
+  --font-sans: Inter, "TikTok Sans", ui-sans-serif, sans-serif;
+  --font-serif: Georgia, Times, serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Type metrics */
+  --display-size: clamp(48px, 7vw, 96px);
+  --display-weight: 600-700;
+  --display-line-height: 0.95;
+  --display-letter-spacing: -0.02em;
+  --h2-size: 28-32;
+  --h2-weight: 600;
+  --h2-line-height: 1.15;
+  --h3-size: 18-20;
+  --h3-weight: 600;
+  --h3-line-height: 1.3;
+  --body-size: 14-15;
+  --body-weight: 400;
+  --body-line-height: 1.6;
+  --kicker-size: 11;
+  --kicker-weight: 400;
+  --kicker-letter-spacing: 0.14em;
+  --kicker-text-transform: uppercase;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--tk-background);
+    --color-foreground: var(--tk-foreground);
+    --color-card: var(--tk-card);
+    --color-card-foreground: var(--tk-card-foreground);
+    --color-popover: var(--tk-popover);
+    --color-popover-foreground: var(--tk-popover-foreground);
+    --color-primary: var(--tk-primary);
+    --color-primary-foreground: var(--tk-primary-foreground);
+    --color-secondary: var(--tk-secondary);
+    --color-secondary-foreground: var(--tk-secondary-foreground);
+    --color-muted: var(--tk-muted);
+    --color-muted-foreground: var(--tk-muted-foreground);
+    --color-accent: var(--tk-accent);
+    --color-accent-foreground: var(--tk-accent-foreground);
+    --color-destructive: var(--tk-destructive);
+    --color-destructive-foreground: var(--tk-destructive-foreground);
+    --color-border: var(--tk-border);
+    --color-input: var(--tk-input);
+    --color-ring: var(--tk-ring);
+    --color-chart-1: var(--tk-chart-1);
+    --color-chart-2: var(--tk-chart-2);
+    --color-chart-3: var(--tk-chart-3);
+    --color-chart-4: var(--tk-chart-4);
+    --color-chart-5: var(--tk-chart-5);
+    --color-sidebar: var(--tk-sidebar);
+    --color-sidebar-foreground: var(--tk-sidebar-foreground);
+    --color-sidebar-primary: var(--tk-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--tk-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--tk-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--tk-sidebar-accent-foreground);
+    --radius-sm: var(--tk-radius-sm);
+    --radius-md: var(--tk-radius-md);
+    --radius-lg: var(--tk-radius-lg);
+    --radius-xl: var(--tk-radius-xl);
+  }
+  @layer base {
+    body { background: var(--tk-background); color: var(--tk-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--tk-background); }
+      .text-background { color: var(--tk-background); }
+      .border-background { border-color: var(--tk-background); }
+      .ring-background { --tw-ring-color: var(--tk-background); }
+      .bg-foreground { background-color: var(--tk-foreground); }
+      .text-foreground { color: var(--tk-foreground); }
+      .border-foreground { border-color: var(--tk-foreground); }
+      .ring-foreground { --tw-ring-color: var(--tk-foreground); }
+      .bg-card { background-color: var(--tk-card); }
+      .text-card { color: var(--tk-card); }
+      .border-card { border-color: var(--tk-card); }
+      .ring-card { --tw-ring-color: var(--tk-card); }
+      .bg-card-foreground { background-color: var(--tk-card-foreground); }
+      .text-card-foreground { color: var(--tk-card-foreground); }
+      .border-card-foreground { border-color: var(--tk-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--tk-card-foreground); }
+      .bg-popover { background-color: var(--tk-popover); }
+      .text-popover { color: var(--tk-popover); }
+      .border-popover { border-color: var(--tk-popover); }
+      .ring-popover { --tw-ring-color: var(--tk-popover); }
+      .bg-popover-foreground { background-color: var(--tk-popover-foreground); }
+      .text-popover-foreground { color: var(--tk-popover-foreground); }
+      .border-popover-foreground { border-color: var(--tk-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--tk-popover-foreground); }
+      .bg-primary { background-color: var(--tk-primary); }
+      .text-primary { color: var(--tk-primary); }
+      .border-primary { border-color: var(--tk-primary); }
+      .ring-primary { --tw-ring-color: var(--tk-primary); }
+      .bg-primary-foreground { background-color: var(--tk-primary-foreground); }
+      .text-primary-foreground { color: var(--tk-primary-foreground); }
+      .border-primary-foreground { border-color: var(--tk-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--tk-primary-foreground); }
+      .bg-secondary { background-color: var(--tk-secondary); }
+      .text-secondary { color: var(--tk-secondary); }
+      .border-secondary { border-color: var(--tk-secondary); }
+      .ring-secondary { --tw-ring-color: var(--tk-secondary); }
+      .bg-secondary-foreground { background-color: var(--tk-secondary-foreground); }
+      .text-secondary-foreground { color: var(--tk-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--tk-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--tk-secondary-foreground); }
+      .bg-muted { background-color: var(--tk-muted); }
+      .text-muted { color: var(--tk-muted); }
+      .border-muted { border-color: var(--tk-muted); }
+      .ring-muted { --tw-ring-color: var(--tk-muted); }
+      .bg-muted-foreground { background-color: var(--tk-muted-foreground); }
+      .text-muted-foreground { color: var(--tk-muted-foreground); }
+      .border-muted-foreground { border-color: var(--tk-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--tk-muted-foreground); }
+      .bg-accent { background-color: var(--tk-accent); }
+      .text-accent { color: var(--tk-accent); }
+      .border-accent { border-color: var(--tk-accent); }
+      .ring-accent { --tw-ring-color: var(--tk-accent); }
+      .bg-accent-foreground { background-color: var(--tk-accent-foreground); }
+      .text-accent-foreground { color: var(--tk-accent-foreground); }
+      .border-accent-foreground { border-color: var(--tk-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--tk-accent-foreground); }
+      .bg-destructive { background-color: var(--tk-destructive); }
+      .text-destructive { color: var(--tk-destructive); }
+      .border-destructive { border-color: var(--tk-destructive); }
+      .ring-destructive { --tw-ring-color: var(--tk-destructive); }
+      .bg-destructive-foreground { background-color: var(--tk-destructive-foreground); }
+      .text-destructive-foreground { color: var(--tk-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--tk-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--tk-destructive-foreground); }
+      .bg-border { background-color: var(--tk-border); }
+      .text-border { color: var(--tk-border); }
+      .border-border { border-color: var(--tk-border); }
+      .ring-border { --tw-ring-color: var(--tk-border); }
+      .bg-input { background-color: var(--tk-input); }
+      .text-input { color: var(--tk-input); }
+      .border-input { border-color: var(--tk-input); }
+      .ring-input { --tw-ring-color: var(--tk-input); }
+      .bg-ring { background-color: var(--tk-ring); }
+      .text-ring { color: var(--tk-ring); }
+      .border-ring { border-color: var(--tk-ring); }
+      .ring-ring { --tw-ring-color: var(--tk-ring); }
+      .bg-chart-1 { background-color: var(--tk-chart-1); }
+      .text-chart-1 { color: var(--tk-chart-1); }
+      .border-chart-1 { border-color: var(--tk-chart-1); }
+      .ring-chart-1 { --tw-ring-color: var(--tk-chart-1); }
+      .bg-chart-2 { background-color: var(--tk-chart-2); }
+      .text-chart-2 { color: var(--tk-chart-2); }
+      .border-chart-2 { border-color: var(--tk-chart-2); }
+      .ring-chart-2 { --tw-ring-color: var(--tk-chart-2); }
+      .bg-chart-3 { background-color: var(--tk-chart-3); }
+      .text-chart-3 { color: var(--tk-chart-3); }
+      .border-chart-3 { border-color: var(--tk-chart-3); }
+      .ring-chart-3 { --tw-ring-color: var(--tk-chart-3); }
+      .bg-chart-4 { background-color: var(--tk-chart-4); }
+      .text-chart-4 { color: var(--tk-chart-4); }
+      .border-chart-4 { border-color: var(--tk-chart-4); }
+      .ring-chart-4 { --tw-ring-color: var(--tk-chart-4); }
+      .bg-chart-5 { background-color: var(--tk-chart-5); }
+      .text-chart-5 { color: var(--tk-chart-5); }
+      .border-chart-5 { border-color: var(--tk-chart-5); }
+      .ring-chart-5 { --tw-ring-color: var(--tk-chart-5); }
+      .bg-sidebar { background-color: var(--tk-sidebar); }
+      .text-sidebar { color: var(--tk-sidebar); }
+      .border-sidebar { border-color: var(--tk-sidebar); }
+      .ring-sidebar { --tw-ring-color: var(--tk-sidebar); }
+      .bg-sidebar-foreground { background-color: var(--tk-sidebar-foreground); }
+      .text-sidebar-foreground { color: var(--tk-sidebar-foreground); }
+      .border-sidebar-foreground { border-color: var(--tk-sidebar-foreground); }
+      .ring-sidebar-foreground { --tw-ring-color: var(--tk-sidebar-foreground); }
+      .bg-sidebar-primary { background-color: var(--tk-sidebar-primary); }
+      .text-sidebar-primary { color: var(--tk-sidebar-primary); }
+      .border-sidebar-primary { border-color: var(--tk-sidebar-primary); }
+      .ring-sidebar-primary { --tw-ring-color: var(--tk-sidebar-primary); }
+      .bg-sidebar-primary-foreground { background-color: var(--tk-sidebar-primary-foreground); }
+      .text-sidebar-primary-foreground { color: var(--tk-sidebar-primary-foreground); }
+      .border-sidebar-primary-foreground { border-color: var(--tk-sidebar-primary-foreground); }
+      .ring-sidebar-primary-foreground { --tw-ring-color: var(--tk-sidebar-primary-foreground); }
+      .bg-sidebar-accent { background-color: var(--tk-sidebar-accent); }
+      .text-sidebar-accent { color: var(--tk-sidebar-accent); }
+      .border-sidebar-accent { border-color: var(--tk-sidebar-accent); }
+      .ring-sidebar-accent { --tw-ring-color: var(--tk-sidebar-accent); }
+      .bg-sidebar-accent-foreground { background-color: var(--tk-sidebar-accent-foreground); }
+      .text-sidebar-accent-foreground { color: var(--tk-sidebar-accent-foreground); }
+      .border-sidebar-accent-foreground { border-color: var(--tk-sidebar-accent-foreground); }
+      .ring-sidebar-accent-foreground { --tw-ring-color: var(--tk-sidebar-accent-foreground); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <!-- App-shell root -->
+      <div class="h-screen overflow-hidden flex" data-viewport-mode="app-shell">
+        <!-- Sidebar -->
+        <aside class="w-[240px] h-screen shrink-0 flex flex-col" style="background: var(--card); border-right: 1px solid var(--border);">
+          <!-- Brand -->
+          <div class="h-16 px-6 flex items-center gap-2 shrink-0">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: var(--primary);"></span>
+            <span class="text-sm tracking-tight truncate" style="font-family: var(--font-display); color: var(--foreground);">FC·INTELLIGENCE</span>
+          </div>
+          <!-- Nav -->
+          <nav class="flex-1 py-4 px-3 flex flex-col gap-1 min-h-0">
+            <a data-dom-id="nav-dashboard" href="#" class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors hover:[color:var(--foreground)] hover:[background:color-mix(in_srgb,var(--card-elevated)_50%,transparent)]" style="color: var(--muted-foreground);">
+              <i data-lucide="layout-dashboard" class="w-[18px] h-[18px] shrink-0"></i>
+              <span class="truncate">工作台</span>
+            </a>
+            <a data-dom-id="nav-tactics" href="#" class="relative flex items-center gap-2.5 px-3 py-2 rounded-md text-sm" style="color: var(--foreground); background: color-mix(in srgb, var(--primary) 8%, var(--card));">
+              <span class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full" style="background: var(--primary);"></span>
+              <i data-lucide="target" class="w-[18px] h-[18px] shrink-0"></i>
+              <span class="truncate">战术看板</span>
+            </a>
+            <a data-dom-id="nav-match" href="#" class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors hover:[color:var(--foreground)] hover:[background:color-mix(in_srgb,var(--card-elevated)_50%,transparent)]" style="color: var(--muted-foreground);">
+              <i data-lucide="activity" class="w-[18px] h-[18px] shrink-0"></i>
+              <span class="truncate">赛事指挥</span>
+            </a>
+            <a data-dom-id="nav-training" href="#" class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors hover:[color:var(--foreground)] hover:[background:color-mix(in_srgb,var(--card-elevated)_50%,transparent)]" style="color: var(--muted-foreground);">
+              <i data-lucide="calendar" class="w-[18px] h-[18px] shrink-0"></i>
+              <span class="truncate">训练计划</span>
+            </a>
+            <a data-dom-id="nav-players" href="#" class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors hover:[color:var(--foreground)] hover:[background:color-mix(in_srgb,var(--card-elevated)_50%,transparent)]" style="color: var(--muted-foreground);">
+              <i data-lucide="users" class="w-[18px] h-[18px] shrink-0"></i>
+              <span class="truncate">球员档案</span>
+            </a>
+            <!-- Divider -->
+            <div class="my-2 h-px" style="background: var(--border);"></div>
+            <!-- AI参谋 entry -->
+            <div class="p-3 rounded-lg" style="background: color-mix(in srgb, var(--secondary) 8%, var(--card)); border: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent);">
+              <div class="flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-[18px] h-[18px] shrink-0" style="color: var(--secondary);"></i>
+                <span class="text-sm font-medium truncate" style="color: var(--foreground);">AI 参谋</span>
+              </div>
+              <p class="text-xs mt-1.5 leading-relaxed" style="color: var(--muted-foreground);">随时提问战术与数据</p>
+              <button class="mt-2.5 w-full h-7 rounded-md text-xs font-medium transition hover:brightness-110" style="background: color-mix(in srgb, var(--secondary) 18%, transparent); color: var(--secondary);">打开对话</button>
+            </div>
+          </nav>
+          <!-- User area -->
+          <div class="p-3 shrink-0" style="border-top: 1px solid var(--border);">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style="background: var(--card-elevated);">
+                <i data-lucide="user" class="w-4 h-4" style="color: var(--muted-foreground);"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm truncate" style="color: var(--foreground);">李教练</div>
+                <div class="text-xs truncate" style="color: var(--muted-foreground);">主教练</div>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4 shrink-0" style="color: var(--muted-foreground);"></i>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right column: header + main -->
+        <div class="flex-1 flex flex-col min-w-0">
+          <!-- Header -->
+          <header class="h-16 shrink-0 flex items-center px-6 gap-4" style="background: var(--card); border-bottom: 1px solid var(--border);">
+            <h1 class="text-lg font-semibold shrink-0" style="font-family: var(--font-display); color: var(--foreground);">战术看板</h1>
+            <div class="flex-1 max-w-md hidden sm:block">
+              <div class="h-9 px-3 rounded-md flex items-center gap-2" style="background: var(--background); border: 1px solid var(--border);">
+                <i data-lucide="search" class="w-4 h-4 shrink-0" style="color: var(--muted-foreground);"></i>
+                <input type="text" placeholder="搜索球员、赛事、训练计划…" class="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm" style="color: var(--foreground);" />
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button class="relative w-9 h-9 rounded-md flex items-center justify-center transition-colors hover:[background:var(--card-elevated)]" style="color: var(--muted-foreground);" aria-label="通知">
+                <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
+                <span class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full" style="background: var(--primary);"></span>
+              </button>
+              <button class="h-9 px-4 rounded-md flex items-center gap-1.5 text-sm transition hover:brightness-110" style="background: color-mix(in srgb, var(--secondary) 12%, var(--card)); border: 1px solid color-mix(in srgb, var(--secondary) 40%, transparent); color: var(--secondary);">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                <span class="whitespace-nowrap">AI 参谋</span>
+              </button>
+            </div>
+          </header>
+
+          <!-- Main scroll area -->
+          <div class="flex-1 overflow-y-auto p-6 min-h-0" data-scroll-region="primary" style="background: var(--background);">
+            <!-- Top toolbar -->
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <div class="flex gap-2 flex-wrap">
+                <button class="h-8 px-3 rounded-full text-xs font-medium whitespace-nowrap transition hover:brightness-110" style="background: var(--primary); color: var(--on-accent); border: 1px solid var(--primary);">4-3-3</button>
+                <button class="h-8 px-3 rounded-full text-xs whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="color: var(--foreground); border: 1px solid var(--border); background: transparent;">4-2-3-1</button>
+                <button class="h-8 px-3 rounded-full text-xs whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="color: var(--foreground); border: 1px solid var(--border); background: transparent;">3-5-2</button>
+                <button class="h-8 px-3 rounded-full text-xs whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="color: var(--foreground); border: 1px solid var(--border); background: transparent;">4-4-2</button>
+              </div>
+              <div class="flex gap-2">
+                <button class="h-8 px-3 rounded-md text-xs flex items-center gap-1.5 whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="color: var(--foreground); border: 1px solid var(--border); background: transparent;">
+                  <i data-lucide="monitor" class="w-3.5 h-3.5"></i><span>全景</span>
+                </button>
+                <button class="h-8 px-3 rounded-md text-xs flex items-center gap-1.5 whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="color: var(--foreground); border: 1px solid var(--border); background: transparent;">
+                  <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i><span>放大</span>
+                </button>
+                <button class="h-8 px-3 rounded-md text-xs flex items-center gap-1.5 whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="color: var(--foreground); border: 1px solid var(--border); background: transparent;">
+                  <i data-lucide="layers" class="w-3.5 h-3.5"></i><span>图层</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tactics body: pitch + panels -->
+            <div class="grid lg:grid-cols-3 gap-4">
+              <!-- Pitch -->
+              <div class="lg:col-span-2">
+                <div class="relative rounded-lg overflow-hidden" style="background: var(--card-elevated); border: 1px solid var(--border); aspect-ratio: 4/3; min-height: 480px;">
+                  <!-- Grass -->
+                  <div class="absolute inset-0" style="background: repeating-linear-gradient(90deg, #1a4d2c 0px, #1a4d2c 60px, #246b3a 60px, #246b3a 120px);"></div>
+                  <!-- Field markings boundary -->
+                  <div class="absolute" style="inset: 4%; border: 2px solid rgba(255,255,255,0.4);">
+                    <!-- Halfway line -->
+                    <div class="absolute" style="left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.4); transform: translateX(-50%);"></div>
+                    <!-- Center circle -->
+                    <div class="absolute rounded-full" style="left: 50%; top: 50%; width: 18%; aspect-ratio: 1/1; border: 2px solid rgba(255,255,255,0.4); transform: translate(-50%, -50%);"></div>
+                    <!-- Center spot -->
+                    <div class="absolute rounded-full" style="left: 50%; top: 50%; width: 6px; height: 6px; background: rgba(255,255,255,0.65); transform: translate(-50%, -50%);"></div>
+                    <!-- Left penalty area -->
+                    <div class="absolute" style="left: 0; top: 50%; width: 16%; height: 56%; border: 2px solid rgba(255,255,255,0.4); border-left: 0; transform: translateY(-50%);"></div>
+                    <!-- Right penalty area -->
+                    <div class="absolute" style="right: 0; top: 50%; width: 16%; height: 56%; border: 2px solid rgba(255,255,255,0.4); border-right: 0; transform: translateY(-50%);"></div>
+                    <!-- Left goal area -->
+                    <div class="absolute" style="left: 0; top: 50%; width: 7%; height: 30%; border: 2px solid rgba(255,255,255,0.4); border-left: 0; transform: translateY(-50%);"></div>
+                    <!-- Right goal area -->
+                    <div class="absolute" style="right: 0; top: 50%; width: 7%; height: 30%; border: 2px solid rgba(255,255,255,0.4); border-right: 0; transform: translateY(-50%);"></div>
+                    <!-- Left penalty spot -->
+                    <div class="absolute rounded-full" style="left: 11%; top: 50%; width: 5px; height: 5px; background: rgba(255,255,255,0.65); transform: translate(-50%, -50%);"></div>
+                    <!-- Right penalty spot -->
+                    <div class="absolute rounded-full" style="right: 11%; top: 50%; width: 5px; height: 5px; background: rgba(255,255,255,0.65); transform: translate(50%, -50%);"></div>
+                    <!-- Left goal -->
+                    <div class="absolute" style="left: -3px; top: 50%; width: 4px; height: 18%; background: rgba(255,255,255,0.65); transform: translateY(-50%);"></div>
+                    <!-- Right goal -->
+                    <div class="absolute" style="right: -3px; top: 50%; width: 4px; height: 18%; background: rgba(255,255,255,0.65); transform: translateY(-50%);"></div>
+                  </div>
+
+                  <!-- Players (4-3-3) -->
+                  <!-- GK -->
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 7%; top: 50%; transform: translate(-50%, -50%); background: color-mix(in srgb, var(--secondary) 70%, transparent); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">1</div>
+                  <!-- Defenders -->
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 22%; top: 20%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">2</div>
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 22%; top: 40%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">3</div>
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 22%; top: 60%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">4</div>
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 22%; top: 80%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">5</div>
+                  <!-- Midfielders -->
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 44%; top: 30%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">6</div>
+                  <!-- Key player #10 -->
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 44%; top: 50%; transform: translate(-50%, -50%); background: var(--secondary); color: var(--on-accent); font-family: var(--font-mono); font-size: 12px; font-weight: 700; box-shadow: 0 0 16px color-mix(in srgb, var(--secondary) 60%, transparent), 0 2px 8px rgba(0,0,0,0.35);">10</div>
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 44%; top: 70%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">8</div>
+                  <!-- Forwards -->
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 70%; top: 25%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">7</div>
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 70%; top: 50%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">9</div>
+                  <div class="absolute w-10 h-10 rounded-full flex items-center justify-center" style="left: 70%; top: 75%; transform: translate(-50%, -50%); background: var(--primary); color: var(--on-media); font-family: var(--font-mono); font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.35);">11</div>
+
+                  <!-- Live score badge -->
+                  <div class="absolute top-3 right-3 rounded-md px-3 py-2" style="background: color-mix(in srgb, var(--background) 80%, transparent); border: 1px solid var(--border); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+                    <div class="text-xs whitespace-nowrap" style="color: var(--muted-foreground);">VS 海港 FC</div>
+                    <div class="text-lg leading-tight whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">0:0</div>
+                    <div class="text-xs whitespace-nowrap" style="font-family: var(--font-mono); color: var(--secondary);">63'</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right data panels -->
+              <div class="lg:col-span-1 flex flex-col gap-4">
+                <!-- Panel 1: Live formation -->
+                <div class="rounded-lg p-4" style="background: var(--card); border: 1px solid var(--border);">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="layout-grid" class="w-4 h-4 shrink-0" style="color: var(--secondary);"></i>
+                    <span class="text-sm font-semibold" style="color: var(--foreground);">实时阵型</span>
+                  </div>
+                  <div class="mt-2 text-2xl font-bold" style="font-family: var(--font-mono); color: var(--secondary);">4-3-3</div>
+                  <div class="grid grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <div class="text-xs truncate" style="color: var(--muted-foreground);">控球率</div>
+                      <div class="text-lg whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">58%</div>
+                    </div>
+                    <div>
+                      <div class="text-xs truncate" style="color: var(--muted-foreground);">传球成功率</div>
+                      <div class="text-lg whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">87%</div>
+                    </div>
+                    <div>
+                      <div class="text-xs truncate" style="color: var(--muted-foreground);">射门</div>
+                      <div class="text-lg whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">12 次</div>
+                    </div>
+                    <div>
+                      <div class="text-xs truncate" style="color: var(--muted-foreground);">角球</div>
+                      <div class="text-lg whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">5 次</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Panel 2: Key players -->
+                <div class="rounded-lg p-4" style="background: var(--card); border: 1px solid var(--border);">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="star" class="w-4 h-4 shrink-0" style="color: var(--primary);"></i>
+                    <span class="text-sm font-semibold" style="color: var(--foreground);">关键球员</span>
+                  </div>
+                  <div class="flex flex-col mt-3">
+                    <div class="flex items-center gap-3 py-2" style="border-bottom: 1px solid var(--border);">
+                      <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background: var(--card-elevated); font-family: var(--font-mono); font-size: 12px; color: var(--foreground);">10</div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm truncate" style="color: var(--foreground);">李明轩</div>
+                        <div class="text-xs truncate" style="color: var(--muted-foreground);">CAM</div>
+                      </div>
+                      <div class="text-right shrink-0">
+                        <div class="text-xs whitespace-nowrap" style="font-family: var(--font-mono); color: var(--secondary);">8.2km</div>
+                        <div class="text-sm font-semibold whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">8.5</div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3 py-2" style="border-bottom: 1px solid var(--border);">
+                      <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background: var(--card-elevated); font-family: var(--font-mono); font-size: 12px; color: var(--foreground);">7</div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm truncate" style="color: var(--foreground);">王浩</div>
+                        <div class="text-xs truncate" style="color: var(--muted-foreground);">RW</div>
+                      </div>
+                      <div class="text-right shrink-0">
+                        <div class="text-xs whitespace-nowrap" style="font-family: var(--font-mono); color: var(--secondary);">7.8km</div>
+                        <div class="text-sm font-semibold whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">7.9</div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3 py-2">
+                      <div class="w-8 h-8 rounded flex items-center justify-center shrink-0" style="background: var(--card-elevated); font-family: var(--font-mono); font-size: 12px; color: var(--foreground);">4</div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm truncate" style="color: var(--foreground);">赵磊</div>
+                        <div class="text-xs truncate" style="color: var(--muted-foreground);">CB</div>
+                      </div>
+                      <div class="text-right shrink-0">
+                        <div class="text-xs whitespace-nowrap" style="font-family: var(--font-mono); color: var(--secondary);">7.1km</div>
+                        <div class="text-sm font-semibold whitespace-nowrap" style="font-family: var(--font-mono); color: var(--foreground);">8.1</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Panel 3: AI tactics tips -->
+                <div class="rounded-lg p-4" style="background: var(--card-elevated); border: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent);">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 shrink-0" style="color: var(--secondary);"></i>
+                    <span class="text-sm font-semibold flex-1" style="color: var(--foreground);">AI 战术提示</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style="background: color-mix(in srgb, var(--secondary) 15%, transparent); color: var(--secondary);">实时</span>
+                  </div>
+                  <div class="flex flex-col gap-3 mt-3">
+                    <div class="flex items-start gap-2">
+                      <i data-lucide="arrow-right" class="w-3.5 h-3.5 mt-0.5 shrink-0" style="color: var(--secondary);"></i>
+                      <p class="text-xs leading-relaxed" style="color: var(--muted-foreground);">右路传中成功率下降至 23%，建议切换 4-2-3-1 加强中场控制</p>
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <i data-lucide="arrow-right" class="w-3.5 h-3.5 mt-0.5 shrink-0" style="color: var(--secondary);"></i>
+                      <p class="text-xs leading-relaxed" style="color: var(--muted-foreground);">#10 号球员跑动覆盖率全场最高，建议围绕其组织进攻</p>
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <i data-lucide="arrow-right" class="w-3.5 h-3.5 mt-0.5 shrink-0" style="color: var(--secondary);"></i>
+                      <p class="text-xs leading-relaxed" style="color: var(--muted-foreground);">对方左后卫体能下降，建议本方右路加强突破</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom toolbar -->
+            <div class="mt-4 flex items-center justify-between flex-wrap gap-3 rounded-lg p-3" style="background: var(--card); border: 1px solid var(--border);">
+              <div class="flex gap-2 flex-wrap">
+                <button class="h-9 px-4 rounded-full flex items-center gap-2 text-sm whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="border: 1px solid var(--border); color: var(--foreground); background: transparent;">
+                  <i data-lucide="users" class="w-3.5 h-3.5"></i><span>球员替换</span>
+                </button>
+                <button class="h-9 px-4 rounded-full flex items-center gap-2 text-sm whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="border: 1px solid var(--border); color: var(--foreground); background: transparent;">
+                  <i data-lucide="git-branch" class="w-3.5 h-3.5"></i><span>阵型切换</span>
+                </button>
+                <button class="h-9 px-4 rounded-full flex items-center gap-2 text-sm whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="border: 1px solid var(--border); color: var(--foreground); background: transparent;">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i><span>视角切换</span>
+                </button>
+                <button class="h-9 px-4 rounded-full flex items-center gap-2 text-sm whitespace-nowrap transition-colors hover:[border-color:var(--secondary)]" style="border: 1px solid var(--border); color: var(--foreground); background: transparent;">
+                  <i data-lucide="layers" class="w-3.5 h-3.5"></i><span>数据叠加</span>
+                </button>
+              </div>
+              <button data-dom-id="cta-enter-match" class="h-9 px-5 rounded-full flex items-center gap-2 text-sm font-medium whitespace-nowrap transition hover:brightness-110" style="background: var(--primary); color: var(--on-accent);">
+                <span>进入赛事指挥</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>
+        @media (prefers-reduced-motion: reduce) {
+          [data-viewport-mode="app-shell"] * { transition: none !important; animation: none !important; }
+        }
+      </style>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
