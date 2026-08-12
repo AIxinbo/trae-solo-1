@@ -1,0 +1,108 @@
+# ============================================================
+# 全栈本地开发模式 compose 覆盖文件
+# 源码挂载 + 热重载 + 调试端口
+# 启动: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# ============================================================
+
+services:
+  # ---------- 前端：源码挂载 + Vite 热重载 ----------
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install --registry=https://registry.npmmirror.com && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ../football-os:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      - TZ=${TZ}
+      - VITE_API_BASE_URL=/api/v1
+      - VITE_AI_API_BASE_URL=/api/v1/ai
+      - VITE_BACKEND_URL=http://backend:8080
+      - VITE_AI_URL=http://ai:8000
+    restart: unless-stopped
+
+  # ---------- Java 后端：源码挂载 + Spring DevTools ----------
+  backend:
+    image: eclipse-temurin:21-jdk-alpine
+    working_dir: /app
+    command: sh -c "./mvnw spring-boot:run -Dspring-boot.run.profiles=dev"
+    volumes:
+      - ../football-server:/app
+      - backend_maven_cache:/root/.m2
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+      - "5005:5005"  # JDWP 远程调试
+    environment:
+      - TZ=${TZ}
+      - SPRING_PROFILES_ACTIVE=dev
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASS=${REDIS_PASS}
+      - MINIO_HOST=minio
+      - MINIO_PORT=9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASS=${MINIO_ROOT_PASS}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRE=${JWT_EXPIRE}
+    restart: unless-stopped
+
+  # ---------- Python AI：源码挂载 + uvicorn 热重载 ----------
+  ai:
+    image: python:3.11-slim
+    working_dir: /app
+    command: sh -c "pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ../football-ai:/app
+    ports:
+      - "${AI_PORT:-8000}:8000"
+    environment:
+      - TZ=${TZ}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+      - BACKEND_URL=http://backend:8080
+    restart: unless-stopped
+
+  # ---------- Nginx：HTTP 开发模式 ----------
+  nginx:
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+  # ---------- 基础设施端口（开发环境也暴露） ----------
+  postgres:
+    ports:
+      - "${PG_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  minio:
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+  milvus:
+    ports:
+      - "${MILVUS_PORT:-19530}:19530"
+
+volumes:
+  frontend_node_modules:
+  backend_maven_cache:

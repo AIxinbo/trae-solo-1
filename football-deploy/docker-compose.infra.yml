@@ -1,0 +1,41 @@
+# ============================================================
+# 基础设施模式 compose 覆盖文件
+# 仅启动 4 个基础设施服务（postgres / redis / minio / milvus + etcd）
+# 禁用所有应用服务（frontend / backend / ai / nginx）
+# 暴露端口供本地直连调试
+# 启动: docker compose -f docker-compose.yml -f docker-compose.infra.yml up -d
+# ============================================================
+
+services:
+  # 禁用应用服务
+  frontend:
+    profiles: [disabled]
+  backend:
+    profiles: [disabled]
+  ai:
+    profiles: [disabled]
+  nginx:
+    profiles: [disabled]
+
+  # ---------- 暴露基础设施端口 ----------
+  postgres:
+    ports:
+      - "${PG_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  minio:
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+  milvus:
+    ports:
+      - "${MILVUS_PORT:-19530}:19530"
+      - "9091:9091"
+
+  etcd:
+    ports:
+      - "2379:2379"
