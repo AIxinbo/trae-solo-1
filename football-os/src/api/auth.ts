@@ -29,5 +29,5 @@ export const authApi = {
     return http.post<void>('/auth/logout')
   },
 
-  me: () => http.post<unknown>('/auth/me'),
+  me: () => http.get<{ id: string; username: string; realName: string; role: string; avatar: string }>('/auth/me'),
 }

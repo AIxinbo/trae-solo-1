@@ -131,6 +131,109 @@ export interface TacticsSaveDTO {
 }
 
 // ============================================================
+// 比赛
+// ============================================================
+export interface MatchItem {
+  id: string
+  opponent: string
+  matchDate: string
+  venue: string
+  homeAway: string
+  status: string
+  scoreHome: number
+  scoreAway: number
+  formationId?: string
+  stats?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface MatchSaveDTO {
+  id?: string
+  opponent: string
+  matchDate: string
+  venue?: string
+  homeAway?: string
+  formationId?: string
+  stats?: string
+}
+
+// ============================================================
+// 训练
+// ============================================================
+export interface TrainingItem {
+  id: string
+  title: string
+  trainDate: string
+  startTime: string
+  endTime: string
+  location: string
+  type: string
+  intensity: string
+  content: string
+  attendance?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface TrainingSaveDTO {
+  id?: string
+  title: string
+  trainDate: string
+  startTime?: string
+  endTime?: string
+  location?: string
+  type?: string
+  intensity?: string
+  content?: string
+  attendance?: string
+}
+
+// ============================================================
+// 球队
+// ============================================================
+export interface Team {
+  id: string
+  name: string
+  shortName?: string
+  logo?: string
+  coach?: string
+  homeVenue?: string
+  foundedYear?: number
+  createTime?: string
+  updateTime?: string
+}
+
+// ============================================================
+// 伤病
+// ============================================================
+export interface InjuryItem {
+  id: string
+  playerId: string
+  injuryType: string
+  description?: string
+  startDate: string
+  expectedReturn?: string
+  actualReturn?: string
+  status: string
+  createTime?: string
+  updateTime?: string
+}
+
+// ============================================================
+// 通知
+// ============================================================
+export interface NotificationItem {
+  id: string
+  userId: string
+  type: string
+  title: string
+  content: string
+  isRead: number
+  createTime: string
+}
+
+// ============================================================
 // AI 对话
 // ============================================================
 export interface ChatRequest {

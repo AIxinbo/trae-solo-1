@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
+import { matchApi, playerApi, trainingApi, injuryApi, type MatchItem, type Player } from '../api'
 
 interface Todo {
   id: number
@@ -30,14 +31,7 @@ const INITIAL_TODOS: Todo[] = [
   { id: 5, text: '对手近 3 场录像分析', time: '18:00', priority: 'mid', done: false },
 ]
 
-const KPIS = [
-  { icon: Users, iconColor: 'var(--secondary)', badge: '↑ +2', badgeBg: 'color-mix(in srgb, var(--success) 15%, transparent)', badgeColor: 'var(--success)', value: '28', label: '在队球员', sub: '+2 本月归队', subColor: 'var(--success)' },
-  { icon: Dumbbell, iconColor: 'var(--primary)', badge: '今日', badgeBg: 'color-mix(in srgb, var(--primary) 15%, transparent)', badgeColor: 'var(--primary)', value: '1', label: '今日训练场次', sub: '14:00 开始', subColor: 'var(--primary)' },
-  { icon: Trophy, iconColor: 'var(--secondary)', badge: '本周', badgeBg: 'color-mix(in srgb, var(--secondary) 15%, transparent)', badgeColor: 'var(--secondary)', value: '3', label: '近 7 天赛事', sub: '下一场 周日', subColor: 'var(--secondary)' },
-  { icon: HeartPulse, iconColor: 'var(--success)', badge: '↓ 2', badgeBg: 'color-mix(in srgb, var(--destructive) 15%, transparent)', badgeColor: 'var(--destructive)', value: '26', label: '健康球员 / 总数', sub: '2 人观察中', subColor: 'var(--destructive)' },
-]
-
-const MATCHES = [
+const FALLBACK_MATCHES = [
   { day: '20', month: '7月', name: 'vs 海港 FC', sub: '中超第 19 轮', tag: '主场', tagBg: 'color-mix(in srgb, var(--primary) 15%, transparent)', tagColor: 'var(--primary)', time: '周日 19:30', status: 'upcoming' },
   { day: '24', month: '7月', name: 'vs 申花联', sub: '足协杯 1/4', tag: '客场', tagBg: 'color-mix(in srgb, var(--secondary) 15%, transparent)', tagColor: 'var(--secondary)', time: '周四 19:35', status: 'upcoming' },
   { day: '14', month: '7月', name: 'vs 泰达雄狮', sub: '中超第 18 轮', tag: '已结束', tagBg: 'var(--card-elevated)', tagColor: 'var(--muted-foreground)', time: '2:1 胜', status: 'done', timeColor: 'var(--success)' },
@@ -56,8 +50,61 @@ const priorityStyle = (p: Todo['priority']) => {
 }
 const priorityLabel = (p: Todo['priority']) => (p === 'high' ? '高' : p === 'mid' ? '中' : '低')
 
+function formatMatch(m: MatchItem) {
+  const d = new Date(m.matchDate)
+  const day = String(d.getDate())
+  const month = `${d.getMonth() + 1}月`
+  const isDone = m.status === 'finished'
+  const isHome = m.homeAway !== 'away'
+  const tag = isDone ? '已结束' : isHome ? '主场' : '客场'
+  const tagBg = isDone
+    ? 'var(--card-elevated)'
+    : isHome
+      ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
+      : 'color-mix(in srgb, var(--secondary) 15%, transparent)'
+  const tagColor = isDone ? 'var(--muted-foreground)' : isHome ? 'var(--primary)' : 'var(--secondary)'
+  const time = isDone ? `${m.scoreHome}:${m.scoreAway}` : `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  return {
+    day,
+    month,
+    name: `vs ${m.opponent}`,
+    sub: m.venue || '',
+    tag,
+    tagBg,
+    tagColor,
+    time,
+    status: isDone ? 'done' : 'upcoming',
+    timeColor: isDone ? 'var(--success)' : undefined,
+  }
+}
+
 export default function Dashboard() {
   const [todos, setTodos] = useState<Todo[]>(INITIAL_TODOS)
+  const [matches, setMatches] = useState(FALLBACK_MATCHES)
+  const [players, setPlayers] = useState<Player[]>([])
+  const [todayTrainings, setTodayTrainings] = useState<number>(1)
+  const [injuryCount, setInjuryCount] = useState(2)
+
+  useEffect(() => {
+    matchApi.recent(3).then((list) => {
+      if (list && list.length > 0) setMatches(list.map(formatMatch))
+    }).catch(() => {})
+    playerApi.all().then(setPlayers).catch(() => {})
+    trainingApi.today().then((list) => setTodayTrainings(list.length)).catch(() => {})
+    injuryApi.active().then((list) => setInjuryCount(list.length)).catch(() => {})
+  }, [])
+
+  const playerCount = players.length || 28
+  const healthyCount = playerCount - injuryCount
+
+  const KPIS = [
+    { icon: Users, iconColor: 'var(--secondary)', badge: '在队', badgeBg: 'color-mix(in srgb, var(--success) 15%, transparent)', badgeColor: 'var(--success)', value: String(playerCount), label: '在队球员', sub: `${playerCount} 人`, subColor: 'var(--success)' },
+    { icon: Dumbbell, iconColor: 'var(--primary)', badge: '今日', badgeBg: 'color-mix(in srgb, var(--primary) 15%, transparent)', badgeColor: 'var(--primary)', value: String(todayTrainings), label: '今日训练场次', sub: todayTrainings > 0 ? '今日安排' : '无安排', subColor: 'var(--primary)' },
+    { icon: Trophy, iconColor: 'var(--secondary)', badge: '近期', badgeBg: 'color-mix(in srgb, var(--secondary) 15%, transparent)', badgeColor: 'var(--secondary)', value: String(matches.length), label: '近期赛事', sub: '查看详情', subColor: 'var(--secondary)' },
+    { icon: HeartPulse, iconColor: 'var(--success)', badge: injuryCount > 0 ? `${injuryCount} 伤` : '全健康', badgeBg: injuryCount > 0 ? 'color-mix(in srgb, var(--destructive) 15%, transparent)' : 'color-mix(in srgb, var(--success) 15%, transparent)', badgeColor: injuryCount > 0 ? 'var(--destructive)' : 'var(--success)', value: String(healthyCount), label: '健康球员 / 总数', sub: injuryCount > 0 ? `${injuryCount} 人伤病` : '全员健康', subColor: injuryCount > 0 ? 'var(--destructive)' : 'var(--success)' },
+  ]
+
+  const MATCHES = matches
 
   const toggleTodo = (id: number) => {
     setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))

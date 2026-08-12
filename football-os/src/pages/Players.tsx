@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowDownUp,
@@ -12,11 +12,12 @@ import {
   Radar as RadarIcon,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
+import { playerApi, type Player as ApiPlayer } from '../api'
 
 type Position = 'GK' | 'DF' | 'MF' | 'FW'
 type Health = 'healthy' | 'watch' | 'injured'
 
-interface Player {
+interface PlayerProfile {
   id: string
   no: string
   name: string
@@ -36,7 +37,7 @@ interface Player {
   evaluations: { date: string; coach: string; score: string; text: string }[]
 }
 
-const PLAYERS: Player[] = [
+const FALLBACK_PLAYERS: PlayerProfile[] = [
   {
     id: 'p10',
     no: '10',
@@ -314,6 +315,38 @@ const FILTERS: { label: string; value: 'ALL' | Position }[] = [
   { label: '前锋 FW', value: 'FW' },
 ]
 
+function mapApiPlayer(p: ApiPlayer): PlayerProfile {
+  const posMap: Record<string, Position> = { GK: 'GK', DF: 'DF', MF: 'MF', FW: 'FW' }
+  const pos = posMap[p.pos] || 'MF'
+  const healthMap: Record<string, Health> = { healthy: 'healthy', watch: 'watch', injured: 'injured' }
+  const health = healthMap[p.health] || 'healthy'
+  const speed = p.ratingSpeed ?? 70
+  const pass = p.ratingPass ?? 70
+  const shot = p.ratingAttack ?? 70
+  const defense = p.ratingDefense ?? 70
+  const stamina = p.ratingPhysical ?? 70
+  const dribble = Math.round((shot + pass) / 2)
+  return {
+    id: p.id,
+    no: p.no,
+    name: p.name,
+    posLabel: p.posLabel,
+    pos,
+    rating: p.rating,
+    health,
+    healthNote: p.healthNote ?? undefined,
+    age: p.age ?? 0,
+    height: p.height ?? 0,
+    weight: p.weight ?? 0,
+    contract: p.contract ?? '',
+    value: p.value ?? '',
+    ratingDelta: p.ratingDelta ?? '',
+    radar: { speed, pass, shot, dribble, defense, stamina },
+    recent: [],
+    evaluations: [],
+  }
+}
+
 function healthColor(h: Health) {
   if (h === 'healthy') return 'var(--success)'
   if (h === 'watch') return 'color-mix(in srgb, var(--primary) 60%, var(--success))'
@@ -371,22 +404,35 @@ const RADAR_LABELS = [
 ]
 
 export default function Players() {
+  const [players, setPlayers] = useState<PlayerProfile[]>(FALLBACK_PLAYERS)
   const [filter, setFilter] = useState<'ALL' | Position>('ALL')
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [sortDesc, setSortDesc] = useState(true)
   const [selectedId, setSelectedId] = useState('p10')
 
+  useEffect(() => {
+    playerApi
+      .all()
+      .then((list) => {
+        if (list && list.length > 0) {
+          setPlayers(list.map(mapApiPlayer))
+          setSelectedId(list[0].id)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   const visiblePlayers = useMemo(() => {
-    let list = filter === 'ALL' ? PLAYERS : PLAYERS.filter((p) => p.pos === filter)
+    let list = filter === 'ALL' ? players : players.filter((p) => p.pos === filter)
     list = [...list].sort((a, b) => (sortDesc ? b.rating - a.rating : a.rating - b.rating))
     return list
-  }, [filter, sortDesc])
+  }, [players, filter, sortDesc])
 
   const selected = useMemo(() => {
-    const found = PLAYERS.find((p) => p.id === selectedId)
+    const found = players.find((p) => p.id === selectedId)
     if (found) return found
-    return visiblePlayers[0] ?? PLAYERS[0]
-  }, [selectedId, visiblePlayers])
+    return visiblePlayers[0] ?? players[0]
+  }, [selectedId, visiblePlayers, players])
 
   return (
     <AppShell>

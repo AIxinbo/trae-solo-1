@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Activity,
@@ -16,10 +16,11 @@ import {
   Zap,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
+import { matchApi, type MatchItem as ApiMatch } from '../api'
 
 type MatchStatus = 'live' | 'preparing' | 'upcoming' | 'finished'
 
-interface MatchItem {
+interface MatchRow {
   id: string
   date: string
   opponent: string
@@ -30,13 +31,36 @@ interface MatchItem {
   resultTone?: 'success' | 'muted'
 }
 
-const MATCHES: MatchItem[] = [
+const FALLBACK_MATCHES: MatchRow[] = [
   { id: 'm1', date: '2026-07-20', opponent: 'vs 海港 FC', round: '中超第19轮', venue: '主场', status: 'live' },
   { id: 'm2', date: '2026-07-14', opponent: 'vs 泰达雄狮', round: '中超第18轮', venue: '主场', status: 'finished', result: '2:1 胜', resultTone: 'success' },
   { id: 'm3', date: '2026-07-24', opponent: 'vs 申花联', round: '足协杯1/4', venue: '客场', status: 'preparing' },
   { id: 'm4', date: '2026-07-28', opponent: 'vs 国安青训', round: '中超第20轮', venue: '主场', status: 'upcoming' },
   { id: 'm5', date: '2026-08-02', opponent: 'vs 鲁能泰山', round: '中超第21轮', venue: '客场', status: 'upcoming' },
 ]
+
+function mapApiMatch(m: ApiMatch): MatchRow {
+  const d = new Date(m.matchDate)
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const venue: '主场' | '客场' = m.homeAway === 'away' ? '客场' : '主场'
+  let status: MatchStatus = 'upcoming'
+  if (m.status === 'finished') status = 'finished'
+  else if (m.status === 'live') status = 'live'
+  else if (m.status === 'scheduled') status = 'preparing'
+  const result = status === 'finished' ? `${m.scoreHome}:${m.scoreAway}` : undefined
+  const resultTone: 'success' | 'muted' | undefined =
+    status === 'finished' ? (m.scoreHome > m.scoreAway ? 'success' : 'muted') : undefined
+  return {
+    id: m.id,
+    date: dateStr,
+    opponent: `vs ${m.opponent}`,
+    round: m.venue || '',
+    venue,
+    status,
+    result,
+    resultTone,
+  }
+}
 
 type EventTone = 'attack' | 'defense' | 'neutral'
 
@@ -102,10 +126,23 @@ function eventToneStyle(tone: EventTone) {
 }
 
 export default function Match() {
+  const [matches, setMatches] = useState<MatchRow[]>(FALLBACK_MATCHES)
   const [selectedId, setSelectedId] = useState('m1')
   const [activeCommand, setActiveCommand] = useState<string | null>(null)
 
-  const selected = useMemo(() => MATCHES.find((m) => m.id === selectedId) ?? MATCHES[0], [selectedId])
+  useEffect(() => {
+    matchApi
+      .page({ current: 1, size: 20 })
+      .then((res) => {
+        if (res.records && res.records.length > 0) {
+          setMatches(res.records.map(mapApiMatch))
+          setSelectedId(res.records[0].id)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const selected = useMemo(() => matches.find((m) => m.id === selectedId) ?? matches[0], [selectedId, matches])
 
   return (
     <AppShell>
@@ -156,7 +193,7 @@ export default function Match() {
             <Filter className="w-3.5 h-3.5" style={{ color: 'var(--muted-foreground)' }} />
           </div>
           <div className="flex flex-col gap-2 mt-3">
-            {MATCHES.map((m) => {
+            {matches.map((m) => {
               const isSelected = m.id === selectedId
               return (
                 <button

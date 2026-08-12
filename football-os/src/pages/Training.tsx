@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
+import { trainingApi, type TrainingItem as ApiTraining } from '../api'
 
 type PlanStatus = 'live' | 'done' | 'todo'
 type ItemStatus = 'done' | 'live' | 'todo'
@@ -47,7 +48,7 @@ interface Plan {
   items: PlanItem[]
 }
 
-const PLANS: Plan[] = [
+const FALLBACK_PLANS: Plan[] = [
   {
     id: 'p1',
     date: '2026-07-15',
@@ -253,11 +254,55 @@ function toneColor(tone: DayPlan['tone']) {
   return 'var(--muted-foreground)'
 }
 
+function mapApiTraining(t: ApiTraining): Plan {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const d = new Date(t.trainDate)
+  d.setHours(0, 0, 0, 0)
+  let status: PlanStatus = 'todo'
+  if (d.getTime() < today.getTime()) status = 'done'
+  else if (d.getTime() === today.getTime()) status = 'live'
+  const intensity: Intensity = t.intensity === 'high' ? 'high' : t.intensity === 'low' ? 'low' : 'mid'
+  return {
+    id: t.id,
+    date: t.trainDate,
+    name: t.title,
+    status,
+    itemsCount: 0,
+    playersCount: 0,
+    schedule: `${t.trainDate} ${t.startTime || ''}-${t.endTime || ''}`,
+    venue: t.location || '训练场',
+    coachTeam: '教练组',
+    progress: status === 'done' ? 100 : status === 'live' ? 50 : 0,
+    joined: status === 'todo' ? 0 : 22,
+    total: 28,
+    doneItems: 0,
+    totalItems: 0,
+    elapsed: '0m',
+    items: t.content
+      ? [{ id: 'c1', name: t.content, time: `${t.startTime || ''}-${t.endTime || ''}`, duration: '', coach: '', group: '全员', intensity, status: status === 'done' ? 'done' : status === 'live' ? 'live' : 'todo' }]
+      : [],
+  }
+}
+
 export default function Training() {
+  const [plans, setPlans] = useState<Plan[]>(FALLBACK_PLANS)
   const [selectedId, setSelectedId] = useState('p1')
   const [weekOffset, setWeekOffset] = useState(0)
 
-  const selected = useMemo(() => PLANS.find((p) => p.id === selectedId) ?? PLANS[0], [selectedId])
+  useEffect(() => {
+    trainingApi
+      .page({ current: 1, size: 20 })
+      .then((res) => {
+        if (res.records && res.records.length > 0) {
+          setPlans(res.records.map(mapApiTraining))
+          setSelectedId(res.records[0].id)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const selected = useMemo(() => plans.find((p) => p.id === selectedId) ?? plans[0], [selectedId, plans])
 
   const weekLabel = useMemo(() => {
     const baseStart = new Date(2026, 6, 13)
@@ -396,7 +441,7 @@ export default function Training() {
             </div>
 
             <div className="flex flex-col gap-2 mt-3">
-              {PLANS.map((p) => {
+              {plans.map((p) => {
                 const isSelected = p.id === selectedId
                 const badge = statusBadge(p.status)
                 return (

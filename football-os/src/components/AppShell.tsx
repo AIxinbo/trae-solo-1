@@ -1,13 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
   Bell,
   Calendar,
   LayoutDashboard,
+  LogOut,
   Menu,
   MessageSquare,
   Search,
+  Shield,
   Sparkles,
   Target,
   Users,
@@ -15,6 +17,9 @@ import {
   ArrowUp,
   Send,
 } from 'lucide-react'
+import { notificationApi } from '../api'
+import { useAuth } from '../context/AuthContext'
+import NotificationCenter from './NotificationCenter'
 
 const NAV = [
   { to: '/app/dashboard', label: '工作台', icon: LayoutDashboard },
@@ -22,6 +27,7 @@ const NAV = [
   { to: '/app/match', label: '赛事指挥', icon: Activity },
   { to: '/app/training', label: '训练计划', icon: Calendar },
   { to: '/app/players', label: '球员档案', icon: Users },
+  { to: '/app/teams', label: '球队管理', icon: Shield },
 ] as const
 
 const PAGE_TITLE: Record<string, string> = {
@@ -30,6 +36,7 @@ const PAGE_TITLE: Record<string, string> = {
   '/app/match': '赛事指挥',
   '/app/training': '训练计划',
   '/app/players': '球员档案',
+  '/app/teams': '球队管理',
 }
 
 interface AppShellProps {
@@ -40,7 +47,19 @@ export default function AppShell({ children }: AppShellProps) {
   const location = useLocation()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const title = PAGE_TITLE[location.pathname] ?? '工作台'
+
+  const refreshUnread = () => {
+    notificationApi.unreadCount().then(setUnreadCount).catch(() => {})
+  }
+
+  useEffect(() => {
+    refreshUnread()
+    const timer = setInterval(refreshUnread, 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Close mobile drawer when route changes
   useEffect(() => {
@@ -114,12 +133,20 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-auto">
             <button
+              onClick={() => setNotifOpen(true)}
               className="relative w-9 h-9 rounded-md flex items-center justify-center transition-colors hover:bg-[var(--card-elevated)]"
               style={{ color: 'var(--muted-foreground)' }}
               aria-label="通知"
             >
               <Bell className="w-[18px] h-[18px]" />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--primary)' }} />
+              {unreadCount > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[10px] font-bold mono"
+                  style={{ background: 'var(--primary)', color: 'var(--on-accent)' }}
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
             <button
               className="h-9 px-3 sm:px-4 rounded-md flex items-center gap-1.5 text-sm transition hover:brightness-110"
@@ -143,6 +170,16 @@ export default function AppShell({ children }: AppShellProps) {
 
       {/* AI Advisor drawer */}
       {aiOpen && <AiAdvisorDrawer onClose={() => setAiOpen(false)} />}
+
+      {/* Notification Center drawer */}
+      {notifOpen && (
+        <NotificationCenter
+          onClose={() => {
+            setNotifOpen(false)
+            refreshUnread()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -217,21 +254,51 @@ function SidebarContent() {
         </div>
       </nav>
       <div className="p-3 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--card-elevated)' }}>
-            <Users className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm truncate" style={{ color: 'var(--foreground)' }}>
-              李教练
-            </div>
-            <div className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>
-              主教练
-            </div>
-          </div>
-        </div>
+        <SidebarUser />
       </div>
     </>
+  )
+}
+
+function SidebarUser() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const name = user?.realName || user?.username || '未登录'
+  const role = user?.role || ''
+  const roleLabel = role === 'admin' ? '管理员' : role === 'coach' ? '主教练' : role || '用户'
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden" style={{ background: 'var(--card-elevated)' }}>
+        {user?.avatar ? (
+          <img src={user.avatar} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <Users className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm truncate" style={{ color: 'var(--foreground)' }}>
+          {name}
+        </div>
+        <div className="text-xs truncate" style={{ color: 'var(--muted-foreground)' }}>
+          {roleLabel}
+        </div>
+      </div>
+      <button
+        onClick={handleLogout}
+        className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors hover:bg-[var(--card-elevated)]"
+        style={{ color: 'var(--muted-foreground)' }}
+        aria-label="退出登录"
+        title="退出登录"
+      >
+        <LogOut className="w-4 h-4" />
+      </button>
+    </div>
   )
 }
 
