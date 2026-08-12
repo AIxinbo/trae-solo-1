@@ -1,0 +1,9 @@
+# 开发环境
+spring:
+  devtools:
+    restart:
+      enabled: true
+
+logging:
+  level:
+    com.football.app: DEBUG

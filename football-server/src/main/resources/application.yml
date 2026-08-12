@@ -1,0 +1,99 @@
+# ============================================================
+# 数智绿茵 业务后端配置
+# ============================================================
+
+spring:
+  application:
+    name: football-server
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Jackson
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+  # 数据源
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:football_db}
+    username: ${DB_USER:football}
+    password: ${DB_PASS:football@2026}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASS:redis@2026}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+
+  # Servlet
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 200MB
+
+# MyBatis-Plus
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.football.app.model.entity
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 业务配置
+football:
+  jwt:
+    secret: ${JWT_SECRET:please-change-this-secret-in-production-min-32-chars}
+    expire: ${JWT_EXPIRE:86400}
+    header: Authorization
+    prefix: "Bearer "
+  minio:
+    endpoint: http://${MINIO_HOST:localhost}:${MINIO_PORT:9000}
+    access-key: ${MINIO_ROOT_USER:admin}
+    secret-key: ${MINIO_ROOT_PASS:minio@2026}
+    bucket: football
+  cors:
+    allowed-origins: "*"
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# 日志
+logging:
+  level:
+    com.football.app: DEBUG
+    org.springframework.security: INFO
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
